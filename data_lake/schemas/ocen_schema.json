@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OCEN Loan Application Schema",
+  "type": "object",
+  "required": ["application_id", "user_id", "loan_purpose", "requested_amount"],
+  "properties": {
+    "application_id": {
+      "type": "string",
+      "description": "Unique loan application identifier"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User identifier"
+    },
+    "lender_id": {
+      "type": "string",
+      "description": "Lender identifier"
+    },
+    "lsp_id": {
+      "type": ["string", "null"],
+      "description": "Loan Service Provider ID"
+    },
+    "loan_purpose": {
+      "type": "string",
+      "enum": ["WORKING_CAPITAL", "BUSINESS_EXPANSION", "EQUIPMENT_PURCHASE", "INVENTORY", "INVOICE_FINANCING", "TERM_LOAN", "OVERDRAFT"],
+      "description": "Loan purpose"
+    },
+    "requested_amount": {
+      "type": ["number", "string"],
+      "description": "Requested loan amount"
+    },
+    "approved_amount": {
+      "type": ["number", "string", "null"],
+      "description": "Approved loan amount"
+    },
+    "interest_rate": {
+      "type": ["number", "string", "null"],
+      "description": "Interest rate percentage"
+    },
+    "tenure_months": {
+      "type": ["integer", "null"],
+      "description": "Loan tenure in months"
+    },
+    "application_date": {
+      "type": "string",
+      "description": "Application submission date"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "DISBURSED", "WITHDRAWN"],
+      "description": "Application status"
+    },
+    "rejection_reason": {
+      "type": ["string", "null"],
+      "description": "Rejection reason if applicable"
+    },
+    "business_details": {
+      "type": ["object", "null"],
+      "properties": {
+        "business_name": {
+          "type": "string"
+        },
+        "business_type": {
+          "type": "string"
+        },
+        "gstin": {
+          "type": ["string", "null"]
+        },
+        "pan": {
+          "type": ["string", "null"]
+        },
+        "vintage_months": {
+          "type": ["integer", "null"]
+        },
+        "annual_revenue": {
+          "type": ["number", "string", "null"]
+        },
+        "monthly_avg_revenue": {
+          "type": ["number", "string", "null"]
+        }
+      }
+    },
+    "scoring_features": {
+      "type": ["object", "null"],
+      "properties": {
+        "credit_score": {
+          "type": ["integer", "null"]
+        },
+        "gst_score": {
+          "type": ["number", "string", "null"]
+        },
+        "banking_score": {
+          "type": ["number", "string", "null"]
+        },
+        "bureau_score": {
+          "type": ["number", "string", "null"]
+        },
+        "final_score": {
+          "type": ["number", "string", "null"]
+        },
+        "risk_category": {
+          "type": ["string", "null"],
+          "enum": ["LOW", "MEDIUM", "HIGH", "VERY_HIGH", null]
+        }
+      }
+    },
+    "consent_ids": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "AA consent IDs used"
+    },
+    "documents": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "document_type": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "verified": {
+            "type": ["boolean", "null"]
+          }
+        }
+      }
+    },
+    "disbursement_date": {
+      "type": ["string", "null"],
+      "description": "Loan disbursement date"
+    },
+    "disbursement_account": {
+      "type": ["string", "null"],
+      "description": "Disbursement account number"
+    }
+  }
+}

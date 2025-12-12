@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Transaction Schema",
+  "type": "object",
+  "required": ["transaction_id", "account_id", "amount", "type"],
+  "properties": {
+    "transaction_id": {
+      "type": "string",
+      "description": "Unique transaction identifier"
+    },
+    "account_id": {
+      "type": "string",
+      "description": "Account identifier"
+    },
+    "date": {
+      "type": "string",
+      "description": "Transaction date (various formats in raw)"
+    },
+    "timestamp": {
+      "type": ["string", "null"],
+      "description": "Transaction timestamp"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["CREDIT", "DEBIT"],
+      "description": "Transaction type"
+    },
+    "amount": {
+      "type": ["number", "string"],
+      "description": "Transaction amount"
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["INR"],
+      "description": "Currency"
+    },
+    "mode": {
+      "type": ["string", "null"],
+      "enum": ["UPI", "IMPS", "NEFT", "RTGS", "CASH", "CHEQUE", "ATM", "POS", "DEBIT_CARD", "CREDIT_CARD", null],
+      "description": "Transaction mode"
+    },
+    "balance_after": {
+      "type": ["number", "string", "null"],
+      "description": "Balance after transaction"
+    },
+    "narration": {
+      "type": ["string", "null"],
+      "description": "Transaction narration"
+    },
+    "reference_number": {
+      "type": ["string", "null"],
+      "description": "Transaction reference number"
+    },
+    "merchant_name": {
+      "type": ["string", "null"],
+      "description": "Merchant name"
+    },
+    "merchant_category": {
+      "type": ["string", "null"],
+      "description": "Merchant category code"
+    },
+    "counterparty_account": {
+      "type": ["string", "null"],
+      "description": "Counterparty account number"
+    },
+    "counterparty_ifsc": {
+      "type": ["string", "null"],
+      "description": "Counterparty IFSC"
+    },
+    "upi_id": {
+      "type": ["string", "null"],
+      "description": "UPI ID if applicable"
+    },
+    "category": {
+      "type": ["string", "null"],
+      "enum": ["SALARY", "EMI", "INVESTMENT", "FOOD", "SHOPPING", "TRAVEL", "UTILITIES", "ENTERTAINMENT", "HEALTHCARE", "EDUCATION", "TRANSFER", "CASH_WITHDRAWAL", "OTHER", null],
+      "description": "Transaction category"
+    }
+  }
+}

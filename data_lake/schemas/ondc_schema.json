@@ -1,0 +1,170 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ONDC Order Schema (Beckn Format)",
+  "type": "object",
+  "required": ["order_id", "user_id", "provider", "context"],
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "Unique order identifier"
+    },
+    "transaction_id": {
+      "type": "string",
+      "description": "Beckn transaction ID"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User identifier"
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": ["nic2004:52110", "nic2004:60221", "nic2004:52112"]
+        },
+        "country": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "enum": ["search", "select", "init", "confirm", "status", "track", "cancel", "update", "rating"]
+        },
+        "core_version": {
+          "type": "string"
+        },
+        "bap_id": {
+          "type": "string"
+        },
+        "bap_uri": {
+          "type": "string"
+        },
+        "bpp_id": {
+          "type": "string"
+        },
+        "bpp_uri": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "descriptor": {
+          "type": ["object", "null"]
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": ["string", "null"]
+          },
+          "quantity": {
+            "type": ["integer", "string"]
+          },
+          "price": {
+            "type": ["number", "string"]
+          }
+        }
+      }
+    },
+    "billing": {
+      "type": ["object", "null"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "address": {
+          "type": "object"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "fulfillment": {
+      "type": ["object", "null"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["HOME_DELIVERY", "PICKUP", "DIGITAL"]
+        },
+        "state": {
+          "type": "string",
+          "enum": ["PENDING", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED", "RTO"]
+        },
+        "tracking": {
+          "type": ["boolean", "null"]
+        },
+        "start": {
+          "type": ["object", "null"]
+        },
+        "end": {
+          "type": ["object", "null"]
+        }
+      }
+    },
+    "quote": {
+      "type": ["object", "null"],
+      "properties": {
+        "price": {
+          "type": ["number", "string"]
+        },
+        "breakup": {
+          "type": ["array", "null"]
+        }
+      }
+    },
+    "payment": {
+      "type": ["object", "null"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["PRE_PAID", "POST_PAID", "COD"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PAID", "NOT_PAID", "REFUNDED"]
+        },
+        "params": {
+          "type": ["object", "null"]
+        }
+      }
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": ["string", "null"]
+    },
+    "state": {
+      "type": "string",
+      "enum": ["CREATED", "ACCEPTED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]
+    }
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mutual Fund Schema",
+  "type": "object",
+  "required": ["portfolio_id", "user_id", "folio_number", "amc"],
+  "properties": {
+    "portfolio_id": {
+      "type": "string",
+      "description": "Unique portfolio identifier"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User identifier"
+    },
+    "folio_number": {
+      "type": "string",
+      "description": "Folio number"
+    },
+    "amc": {
+      "type": "string",
+      "description": "Asset Management Company"
+    },
+    "scheme_name": {
+      "type": "string",
+      "description": "Mutual fund scheme name"
+    },
+    "scheme_code": {
+      "type": ["string", "null"],
+      "description": "Scheme code"
+    },
+    "isin": {
+      "type": ["string", "null"],
+      "pattern": "^INF[A-Z0-9]{9}$",
+      "description": "ISIN code"
+    },
+    "scheme_type": {
+      "type": "string",
+      "enum": ["EQUITY", "DEBT", "HYBRID", "LIQUID", "GILT", "INDEX", "ETF", "FOF"],
+      "description": "Scheme type"
+    },
+    "units": {
+      "type": ["number", "string"],
+      "description": "Number of units"
+    },
+    "current_nav": {
+      "type": ["number", "string"],
+      "description": "Current NAV"
+    },
+    "current_value": {
+      "type": ["number", "string", "null"],
+      "description": "Current value of holdings"
+    },
+    "invested_amount": {
+      "type": ["number", "string", "null"],
+      "description": "Total invested amount"
+    },
+    "average_nav": {
+      "type": ["number", "string", "null"],
+      "description": "Average NAV"
+    },
+    "returns_abs": {
+      "type": ["number", "string", "null"],
+      "description": "Absolute returns"
+    },
+    "returns_pct": {
+      "type": ["number", "string", "null"],
+      "description": "Returns percentage"
+    },
+    "sip_details": {
+      "type": ["object", "null"],
+      "properties": {
+        "sip_id": {
+          "type": "string"
+        },
+        "sip_amount": {
+          "type": ["number", "string"]
+        },
+        "sip_frequency": {
+          "type": "string",
+          "enum": ["MONTHLY", "QUARTERLY", "WEEKLY", "DAILY"]
+        },
+        "sip_date": {
+          "type": ["integer", "null"]
+        },
+        "sip_start_date": {
+          "type": "string"
+        },
+        "sip_end_date": {
+          "type": ["string", "null"]
+        },
+        "sip_status": {
+          "type": "string",
+          "enum": ["ACTIVE", "PAUSED", "CANCELLED", "COMPLETED"]
+        }
+      }
+    },
+    "transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "transaction_id": {
+            "type": "string"
+          },
+          "transaction_date": {
+            "type": "string"
+          },
+          "transaction_type": {
+            "type": "string",
+            "enum": ["PURCHASE", "REDEMPTION", "SWITCH_IN", "SWITCH_OUT", "DIVIDEND", "SIP"]
+          },
+          "amount": {
+            "type": ["number", "string"]
+          },
+          "units": {
+            "type": ["number", "string"]
+          },
+          "nav": {
+            "type": ["number", "string"]
+          }
+        }
+      }
+    },
+    "nav_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "nav": {
+            "type": ["number", "string"]
+          }
+        }
+      }
+    }
+  }
+}

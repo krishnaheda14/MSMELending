@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Credit Bureau Report Schema",
+  "type": "object",
+  "required": ["report_id", "user_id", "bureau_type", "report_date"],
+  "properties": {
+    "report_id": {
+      "type": "string",
+      "description": "Unique report identifier"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User identifier"
+    },
+    "bureau_type": {
+      "type": "string",
+      "enum": ["CIBIL", "EXPERIAN", "EQUIFAX", "CRIF"],
+      "description": "Bureau name"
+    },
+    "report_date": {
+      "type": "string",
+      "description": "Report generation date"
+    },
+    "credit_score": {
+      "type": ["integer", "null"],
+      "minimum": 300,
+      "maximum": 900,
+      "description": "Credit score"
+    },
+    "pan": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{3}[PCHABFGJLT][A-Z][0-9]{4}[A-Z]$|^[A-Z]{5}XXXX[A-Z]$",
+      "description": "PAN number (masked or full)"
+    },
+    "name": {
+      "type": ["string", "null"],
+      "description": "User name"
+    },
+    "dob": {
+      "type": ["string", "null"],
+      "description": "Date of birth"
+    },
+    "gender": {
+      "type": ["string", "null"],
+      "enum": ["M", "F", "O", null],
+      "description": "Gender"
+    },
+    "address": {
+      "type": ["object", "null"],
+      "description": "Address details"
+    },
+    "accounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "account_number": {
+            "type": "string"
+          },
+          "account_type": {
+            "type": "string",
+            "enum": ["PERSONAL_LOAN", "HOME_LOAN", "AUTO_LOAN", "CREDIT_CARD", "OVERDRAFT", "LOAN_AGAINST_PROPERTY", "GOLD_LOAN", "EDUCATION_LOAN", "TWO_WHEELER_LOAN", "BUSINESS_LOAN"]
+          },
+          "ownership": {
+            "type": "string",
+            "enum": ["INDIVIDUAL", "JOINT", "GUARANTOR"]
+          },
+          "date_opened": {
+            "type": ["string", "null"]
+          },
+          "date_closed": {
+            "type": ["string", "null"]
+          },
+          "credit_limit": {
+            "type": ["number", "null"]
+          },
+          "current_balance": {
+            "type": ["number", "null"]
+          },
+          "amount_overdue": {
+            "type": ["number", "null"]
+          },
+          "dpd_string": {
+            "type": ["string", "null"],
+            "description": "24-month DPD history pipe-separated"
+          },
+          "write_off_amount": {
+            "type": ["number", "null"]
+          },
+          "settlement_amount": {
+            "type": ["number", "null"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "CLOSED", "WRITTEN_OFF", "SETTLED", "RESTRUCTURED"]
+          },
+          "lender_name": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    },
+    "enquiries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "enquiry_date": {
+            "type": "string"
+          },
+          "enquiry_purpose": {
+            "type": "string"
+          },
+          "lender_name": {
+            "type": "string"
+          },
+          "amount": {
+            "type": ["number", "null"]
+          }
+        }
+      }
+    },
+    "total_accounts": {
+      "type": ["integer", "null"]
+    },
+    "active_accounts": {
+      "type": ["integer", "null"]
+    },
+    "total_credit_limit": {
+      "type": ["number", "null"]
+    },
+    "total_outstanding": {
+      "type": ["number", "null"]
+    },
+    "total_overdue": {
+      "type": ["number", "null"]
+    },
+    "enquiries_last_30_days": {
+      "type": ["integer", "null"]
+    },
+    "enquiries_last_90_days": {
+      "type": ["integer", "null"]
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "scale": {
+
+    "users": 1000,                    
+    "bank_accounts": 1500,           
+    "transactions": 50000,          
+    "gst_profiles": 500,              
+    "credit_reports": 800,            
+    "insurance_policies": 1000,      
+    "mutual_fund_portfolios": 500,    
+    "ondc_orders": 2000,              
+    "ocen_applications": 300          
+  
+  },
+  "date_range": {
+    "start": "2022-01-01",
+    "end": "2025-12-11"
+  },
+  "banks": [
+    "HDFC",
+    "ICICI",
+    "SBI",
+    "AXIS",
+    "KOTAK",
+    "IDFC_FIRST",
+    "YES_BANK"
+  ],
+  "messiness_config": {
+    "date_format_variation": true,
+    "numeric_format_inconsistency": true,
+    "missing_field_probability": 0.15,
+    "duplicate_probability": 0.02,
+    "merchant_name_drift": true,
+    "bank_specific_quirks": true
+  },
+  "distributions": {
+    "salary_range": [15000, 200000],
+    "upi_spend_range": [50, 5000],
+    "emi_range": [1000, 50000],
+    "gst_turnover": {
+      "micro": [100000, 500000],
+      "small": [500000, 2000000],
+      "medium": [2000000, 7500000]
+    },
+    "credit_score": {
+      "300-550": 0.12,
+      "550-650": 0.35,
+      "650-750": 0.38,
+      "750-900": 0.15
+    }
+  },
+  "output": {
+    "format": "ndjson",
+    "include_csv_samples": true,
+    "batch_size": 10000
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Insurance Policy Schema",
+  "type": "object",
+  "required": ["policy_id", "user_id", "policy_type", "insurer"],
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "description": "Unique policy identifier"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User identifier"
+    },
+    "policy_number": {
+      "type": "string",
+      "description": "Policy number"
+    },
+    "policy_type": {
+      "type": "string",
+      "enum": ["LIFE", "HEALTH", "TERM", "ENDOWMENT", "ULIP", "VEHICLE", "HOME", "TRAVEL"],
+      "description": "Policy type"
+    },
+    "insurer": {
+      "type": "string",
+      "description": "Insurance company name"
+    },
+    "insured_name": {
+      "type": ["string", "null"],
+      "description": "Insured person name"
+    },
+    "nominee_name": {
+      "type": ["string", "null"],
+      "description": "Nominee name"
+    },
+    "sum_assured": {
+      "type": ["number", "string", "null"],
+      "description": "Sum assured amount"
+    },
+    "premium_amount": {
+      "type": ["number", "string", "null"],
+      "description": "Premium amount"
+    },
+    "premium_frequency": {
+      "type": ["string", "null"],
+      "enum": ["MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY", "SINGLE_PREMIUM", null],
+      "description": "Premium payment frequency"
+    },
+    "policy_start_date": {
+      "type": ["string", "null"],
+      "description": "Policy start date"
+    },
+    "policy_end_date": {
+      "type": ["string", "null"],
+      "description": "Policy end date"
+    },
+    "maturity_date": {
+      "type": ["string", "null"],
+      "description": "Maturity date"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ACTIVE", "LAPSED", "MATURED", "SURRENDERED", "CLAIMED"],
+      "description": "Policy status"
+    },
+    "last_premium_paid_date": {
+      "type": ["string", "null"],
+      "description": "Last premium paid date"
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim_id": {
+            "type": "string"
+          },
+          "claim_date": {
+            "type": "string"
+          },
+          "claim_amount": {
+            "type": ["number", "string"]
+          },
+          "claim_status": {
+            "type": "string",
+            "enum": ["PENDING", "APPROVED", "REJECTED", "SETTLED"]
+          },
+          "settlement_date": {
+            "type": ["string", "null"]
+          },
+          "settlement_amount": {
+            "type": ["number", "string", "null"]
+          },
+          "claim_type": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    },
+    "rider_details": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
