@@ -3,7 +3,9 @@ import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, BarChart3, Ar
 import { formatCurrency, formatPercent, formatNumber } from '../utils/formatters';
 
 const FinancialSummary = () => {
-  const [customerId, setCustomerId] = useState('CUST_MSM_00001');
+  const [customerId, setCustomerId] = useState(() => {
+    try { return localStorage.getItem('msme_customer_id') || 'CUST_MSM_00001'; } catch (e) { return 'CUST_MSM_00001'; }
+  });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,9 +17,11 @@ const FinancialSummary = () => {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:5000/api/analytics/${customerId}/earnings-spendings`);
-      if (!response.ok) throw new Error('Failed to fetch data');
-      const result = await response.json();
+        try { localStorage.setItem('msme_customer_id', customerId); } catch (e) { /* ignore */ }
+        const url = `/api/earnings-spendings?customer_id=${encodeURIComponent(customerId)}`;
+        const response = await fetch(url);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Failed to fetch data');
       setData(result);
     } catch (err) {
       setError(err.message);
@@ -27,7 +31,14 @@ const FinancialSummary = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    if (customerId) fetchData();
+    const handleStorage = (e) => {
+      if (e.key === 'msme_customer_id' && e.newValue) {
+        setCustomerId(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, [customerId]);
 
   const handleKeyPress = (e) => {

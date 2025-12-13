@@ -34,7 +34,7 @@ function App() {
                   </svg>
                 </button>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-                  Indian Financial Data Lake
+                  AA-Based Lending Framework  
                 </h1>
               </div>
               <div className="flex items-center space-x-2">

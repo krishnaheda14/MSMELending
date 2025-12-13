@@ -11,6 +11,7 @@ const EarningsVsSpendings = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showCalculation, setShowCalculation] = useState(null);
+  const [showExpenseTxns, setShowExpenseTxns] = useState(null);
   const [expandedCashflow, setExpandedCashflow] = useState(false);
 
   useEffect(() => {
@@ -81,7 +82,34 @@ const EarningsVsSpendings = () => {
 
     // Extract the specific calculation for this metric
     const metricKey = metric.toLowerCase().replace(/ /g, '_').replace(/[()]/g, '');
-    const calcData = calculation[metricKey] || calculation;
+    let calcData = calculation[metricKey] || calculation;
+
+    // If we received the parent calculation object (no direct formula), try to locate nested metric entry
+    if (calcData && !calcData.formula && typeof calculation === 'object') {
+      const variants = [
+        metricKey,
+        metricKey.replace(/[^a-z0-9]/g, ''),
+        metricKey + '_variance',
+        metricKey + '_ratio',
+        'reconciliation_variance',
+        'reconciliation_ratio',
+        'total_expenses',
+        'non_essential_spend',
+        'essential_spend',
+        'income_stability_cv',
+        'seasonality_index'
+      ];
+      for (const v of variants) {
+        if (calculation[v]) { calcData = calculation[v]; break; }
+      }
+      if ((!calcData || !calcData.formula) && typeof calculation === 'object') {
+        // try fuzzy match by token
+        const tokens = metricKey.split('_').filter(Boolean);
+        for (const k of Object.keys(calculation)) {
+          if (tokens.some(t => k.includes(t))) { calcData = calculation[k]; break; }
+        }
+      }
+    }
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
@@ -113,6 +141,21 @@ const EarningsVsSpendings = () => {
                   <div key={key} className="flex justify-between bg-gray-50 p-3 rounded hover:bg-gray-100">
                     <span className="text-gray-700 font-medium">{key}:</span>
                     <span className="font-semibold text-gray-900">{typeof value === 'number' ? formatNumber(value) : value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* If calculation contains sample transactions, render link to show them */}
+          {calcData && calcData.sample_transactions && (
+            <div className="mb-4">
+              <h4 className="font-semibold text-gray-700 mb-2">Sample Transactions</h4>
+              <div className="space-y-2">
+                {Object.entries(calcData.sample_transactions).map(([k, v]) => (
+                  <div key={k} className="flex justify-between items-center">
+                    <div className="text-sm text-gray-700">{k.replace(/_/g, ' ')}: {v.length} sample(s)</div>
+                    <button className="text-blue-600" onClick={() => { onClose(); setTimeout(() => setShowExpenseTxns({ type: k, txns: v }), 100); }}>Show transactions</button>
                   </div>
                 ))}
               </div>
@@ -186,6 +229,39 @@ const EarningsVsSpendings = () => {
           calculation={showCalculation.calculation}
           onClose={() => setShowCalculation(null)}
         />
+      )}
+
+      {showExpenseTxns && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowExpenseTxns(null)}>
+          <div className="bg-white rounded-lg p-6 max-w-3xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-gray-800">Transactions — {showExpenseTxns.type.replace(/_/g, ' ')}</h3>
+              <button onClick={() => setShowExpenseTxns(null)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant / Narration</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {showExpenseTxns.txns && showExpenseTxns.txns.length > 0 ? showExpenseTxns.txns.map((t, i) => (
+                    <tr key={i}>
+                      <td className="px-4 py-2 text-sm text-gray-700">{t.date}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{t.merchant} {t.narration ? '— ' + t.narration : ''}</td>
+                      <td className="px-4 py-2 text-sm text-right text-gray-700">{formatCurrency(t.amount)}</td>
+                    </tr>
+                  )) : (
+                    <tr><td className="p-4">No sample transactions available.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Customer ID Header */}
@@ -418,12 +494,28 @@ const EarningsVsSpendings = () => {
         {/* Expense Breakdown */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-green-50 rounded-lg">
-            <h4 className="font-semibold text-gray-700 mb-2">Essential Spending</h4>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(expense_composition?.essential_spend)}</p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-2">Essential Spending</h4>
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(expense_composition?.essential_spend)}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowCalculation({ metric: 'Essential Spending', calculation: expense_composition?.calculation || expense_composition })} className="text-blue-500 hover:text-blue-700"><Info className="w-4 h-4"/></button>
+                <button onClick={() => setShowExpenseTxns({ type: 'essential', txns: expense_composition?.sample_transactions?.essential || [] })} className="text-gray-600 hover:text-gray-800">Show txns</button>
+              </div>
+            </div>
           </div>
           <div className="p-4 bg-orange-50 rounded-lg">
-            <h4 className="font-semibold text-gray-700 mb-2">Non-Essential Spending</h4>
-            <p className="text-2xl font-bold text-orange-600">{formatCurrency(expense_composition?.non_essential_spend)}</p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-2">Non-Essential Spending</h4>
+                <p className="text-2xl font-bold text-orange-600">{formatCurrency(expense_composition?.non_essential_spend)}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowCalculation({ metric: 'Non-Essential Spending', calculation: expense_composition?.calculation || expense_composition })} className="text-blue-500 hover:text-blue-700"><Info className="w-4 h-4"/></button>
+                <button onClick={() => setShowExpenseTxns({ type: 'non_essential', txns: expense_composition?.sample_transactions?.non_essential || [] })} className="text-gray-600 hover:text-gray-800">Show txns</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
