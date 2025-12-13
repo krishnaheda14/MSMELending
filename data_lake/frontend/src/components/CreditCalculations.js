@@ -2,13 +2,22 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const CreditCalculations = () => {
-  const [customerId, setCustomerId] = useState('CUST_MSM_00001');
+  const [customerId, setCustomerId] = useState(() => {
+    try { return localStorage.getItem('msme_customer_id') || 'CUST_MSM_00001'; } catch (e) { return 'CUST_MSM_00001'; }
+  });
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+    const handleStorage = (e) => {
+      if (e.key === 'msme_customer_id' && e.newValue) {
+        setCustomerId(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [customerId]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -56,6 +65,28 @@ const CreditCalculations = () => {
   return (
     <div className="space-y-6 p-6">
       <h2 className="text-2xl font-bold">Credit Calculations — {customerId}</h2>
+
+      <section className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+        <h3 className="font-bold text-yellow-800 mb-2">📘 Simple Example</h3>
+        <p className="text-sm text-gray-700 mb-3">
+          Imagine a customer with:
+        </p>
+        <ul className="list-disc list-inside text-sm text-gray-700 mb-3">
+          <li><strong>Cashflow Stability</strong> = 75 (steady monthly revenue, low variance)</li>
+          <li><strong>Business Health</strong> = 85 (GST compliant, ONDC active, mutual funds invested)</li>
+          <li><strong>Debt Capacity</strong> = 60 (moderate credit utilization, good bureau score)</li>
+        </ul>
+        <p className="text-sm text-gray-700 mb-2">Our weighted formula is:</p>
+        <pre className="bg-white p-2 rounded text-sm border">
+Credit Score = (Cashflow × 0.45) + (Business × 0.35) + (Debt × 0.20)
+            = (75 × 0.45) + (85 × 0.35) + (60 × 0.20)
+            = 33.75 + 29.75 + 12
+            = 75.5
+        </pre>
+        <p className="text-sm text-gray-700 mt-2">
+          This score of <strong>75.5/100</strong> places the customer in the <span className="font-semibold text-green-700">"Approve with Conditions"</span> category.
+        </p>
+      </section>
 
       <section className="bg-white rounded-lg p-4 shadow">
         <h3 className="font-semibold">Composite Score</h3>

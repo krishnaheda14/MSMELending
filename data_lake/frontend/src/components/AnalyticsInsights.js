@@ -7,7 +7,9 @@ import {
 } from 'recharts';
 
 const AnalyticsInsights = () => {
-  const [customerId, setCustomerId] = useState('CUST_MSM_00001');
+  const [customerId, setCustomerId] = useState(() => {
+    try { return localStorage.getItem('msme_customer_id') || 'CUST_MSM_00001'; } catch (e) { return 'CUST_MSM_00001'; }
+  });
   const [analytics, setAnalytics] = useState(null);
   const [aiInsights, setAiInsights] = useState(null);
   const [creditScore, setCreditScore] = useState(null);
@@ -15,11 +17,19 @@ const AnalyticsInsights = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState(null);
   const [calcModal, setCalcModal] = useState({ open: false, title: '', data: null });
+  const [debugMinimized, setDebugMinimized] = useState(true);
 
   useEffect(() => {
     if (customerId) {
       fetchAnalytics();
     }
+    const handleStorage = (e) => {
+      if (e.key === 'msme_customer_id' && e.newValue) {
+        setCustomerId(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, [customerId]);
 
   const fetchAnalytics = async () => {
@@ -362,7 +372,51 @@ const AnalyticsInsights = () => {
 
     return (
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-2xl font-bold text-gray-800 mb-6">GST & Business Insights</h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">GST & Business Insights</h3>
+          <button
+            onClick={() => setDebugMinimized(!debugMinimized)}
+            className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded flex items-center space-x-1"
+          >
+            <span>{debugMinimized ? '🔍 Show Debug' : '➖ Hide Debug'}</span>
+          </button>
+        </div>
+
+        {!debugMinimized && (
+          <div className="mb-6 bg-gray-50 border border-gray-300 rounded-lg p-4">
+            <p className="text-xs font-mono text-gray-600 mb-2">GST Raw Data:</p>
+            <pre className="text-xs bg-white p-3 rounded border overflow-x-auto max-h-64">
+              {JSON.stringify(gst, null, 2)}
+            </pre>
+          </div>
+        )}
+        {!debugMinimized && gst.mapping_debug && gst.mapping_debug.length > 0 && (
+          <div className="mb-6 bg-white border border-gray-200 rounded-lg p-3">
+            <p className="text-sm font-semibold text-gray-700 mb-2">GST Mapping Debug (sample)</p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 py-1 text-left font-medium text-gray-500">GSTIN</th>
+                    <th className="px-2 py-1 text-left font-medium text-gray-500">Raw State</th>
+                    <th className="px-2 py-1 text-left font-medium text-gray-500">Mapped State</th>
+                    <th className="px-2 py-1 text-right font-medium text-gray-500">Turnover</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {gst.mapping_debug.slice(0, 10).map((m, i) => (
+                    <tr key={i}>
+                      <td className="px-2 py-1">{m.gstin || '-'}</td>
+                      <td className="px-2 py-1">{m.raw_state || '-'}</td>
+                      <td className="px-2 py-1">{m.mapped_state || '-'}</td>
+                      <td className="px-2 py-1 text-right">{formatCurrency(m.turnover || 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div onClick={() => showCalculation('gst', 'Total Businesses')} className="cursor-pointer bg-indigo-50 rounded-lg p-4">
@@ -447,7 +501,7 @@ const AnalyticsInsights = () => {
                 {anomaly.description && (
                   <p className="text-sm text-gray-600 mb-3">{anomaly.description}</p>
                 )}
-                {anomaly.transactions && anomaly.transactions.length > 0 && (
+                {(anomaly.top_transactions && anomaly.top_transactions.length > 0) || (anomaly.transactions && anomaly.transactions.length > 0) ? (
                   <div className="mt-3">
                     <p className="text-sm font-medium text-gray-700 mb-2">Transactions:</p>
                     <div className="overflow-x-auto">
@@ -461,19 +515,22 @@ const AnalyticsInsights = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                          {anomaly.transactions.slice(0, 5).map((txn, tidx) => (
+                          {(anomaly.top_transactions && anomaly.top_transactions.length > 0
+                            ? anomaly.top_transactions
+                            : (anomaly.transactions || []).slice(0, 5)
+                          ).map((txn, tidx) => (
                             <tr key={tidx} className="hover:bg-gray-50">
-                              <td className="px-3 py-2">{txn.date || txn.transaction_date || 'N/A'}</td>
-                              <td className="px-3 py-2"><span className="px-2 py-1 bg-gray-100 rounded text-xs">{txn.type || 'N/A'}</span></td>
-                              <td className="px-3 py-2 text-right font-semibold">{formatCurrency(txn.amount || 0)}</td>
-                              <td className="px-3 py-2 text-gray-600 truncate max-w-xs">{txn.description || txn.narration || '-'}</td>
+                              <td className="px-3 py-2">{txn.date || txn.transaction_date || txn.raw?.date || 'N/A'}</td>
+                              <td className="px-3 py-2"><span className="px-2 py-1 bg-gray-100 rounded text-xs">{txn.type || txn.transaction_type || txn.raw?.type || 'N/A'}</span></td>
+                              <td className="px-3 py-2 text-right font-semibold">{formatCurrency(txn.amount || txn._numeric_amount || (txn.raw && txn.raw.amount) || 0)}</td>
+                              <td className="px-3 py-2 text-gray-600 truncate max-w-xs">{txn.description || txn.narration || txn.raw?.description || '-'}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
             ))}
           </div>
@@ -730,7 +787,8 @@ const AnalyticsInsights = () => {
             type="text"
             value={customerId}
             onChange={(e) => setCustomerId(e.target.value)}
-            placeholder="Customer ID"
+            onKeyPress={(e) => e.key === 'Enter' && fetchAnalytics()}
+            placeholder="Customer ID (press Enter to submit)"
             className="px-4 py-2 border border-gray-300 rounded-lg"
           />
           <button

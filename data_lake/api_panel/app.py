@@ -8,6 +8,7 @@ from flask_socketio import SocketIO, emit
 import os
 import json
 import subprocess
+import sys
 import threading
 from typing import List, Dict
 from datetime import datetime
@@ -19,6 +20,8 @@ CLEAN_DIR = os.path.join(BASE_DIR, 'clean')
 LOGS_DIR = os.path.join(BASE_DIR, 'logs')
 ANALYTICS_DIR = os.path.join(BASE_DIR, 'analytics')
 FRONTEND_BUILD = os.path.join(BASE_DIR, 'frontend', 'build')
+PIPELINE_CACHE_DIR = os.path.join(LOGS_DIR, 'pipeline_cache')
+PIPELINE_BUFFER_DIR = os.path.join(LOGS_DIR, 'pipeline_buffer')
 
 # Flask app + SocketIO
 app = Flask(__name__, static_folder=FRONTEND_BUILD, template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
@@ -51,6 +54,150 @@ def load_ndjson(path: str, limit: int = 100) -> List[Dict]:
     except FileNotFoundError:
         return []
     return out
+
+
+# ---- Pipeline cache helpers ----
+def ensure_pipeline_cache_dir():
+    try:
+        os.makedirs(PIPELINE_CACHE_DIR, exist_ok=True)
+    except Exception:
+        pass
+
+def pipeline_cache_path(customer_id: str) -> str:
+    ensure_pipeline_cache_dir()
+    safe = customer_id.replace('/', '_')
+    return os.path.join(PIPELINE_CACHE_DIR, f"{safe}_pipeline.json")
+
+def load_pipeline_cache(customer_id: str) -> Dict:
+    path = pipeline_cache_path(customer_id)
+    if not os.path.exists(path):
+        return {'customer_id': customer_id, 'logs': [], 'steps': {}, 'pipelineStatus': 'idle', 'last_updated': None}
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {'customer_id': customer_id, 'logs': [], 'steps': {}, 'pipelineStatus': 'idle', 'last_updated': None}
+
+def save_pipeline_cache(customer_id: str, state: Dict):
+    path = pipeline_cache_path(customer_id)
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+    except Exception:
+        # If writing fails (disk/DB disconnect etc), buffer state to a local queue for later flushing
+        try:
+            os.makedirs(PIPELINE_BUFFER_DIR, exist_ok=True)
+            fname = f"buffer_{customer_id}_{datetime.utcnow().strftime('%Y%m%dT%H%M%S%f')}.json"
+            bufpath = os.path.join(PIPELINE_BUFFER_DIR, fname)
+            with open(bufpath, 'w', encoding='utf-8') as bf:
+                json.dump({'target_path': path, 'state': state}, bf, ensure_ascii=False, indent=2)
+            print(f"[WARN] save_pipeline_cache failed; buffered to {bufpath}")
+        except Exception as e:
+            print(f"[ERROR] Failed to buffer pipeline cache: {e}")
+
+def append_cache_log(customer_id: str, level: str, message: str):
+    state = load_pipeline_cache(customer_id)
+    entry = {'timestamp': datetime.utcnow().isoformat() + 'Z', 'level': level, 'message': message}
+    state.setdefault('logs', []).append(entry)
+    # keep last 1000 logs
+    state['logs'] = state['logs'][-1000:]
+    state['last_updated'] = datetime.utcnow().isoformat() + 'Z'
+    save_pipeline_cache(customer_id, state)
+
+def update_cache_progress(customer_id: str, stepId: int, step: str, progress: int, status: str, pipelineStatus: str = None):
+    state = load_pipeline_cache(customer_id)
+    steps = state.setdefault('steps', {})
+    steps[str(stepId)] = {'step': step, 'progress': progress, 'status': status}
+    if pipelineStatus:
+        state['pipelineStatus'] = pipelineStatus
+    state['last_updated'] = datetime.utcnow().isoformat() + 'Z'
+    save_pipeline_cache(customer_id, state)
+
+def is_raw_dataset_present(customer_id: str) -> bool:
+    # simple heuristic: check for any file in RAW_DIR starting with customer_id
+    try:
+        if not os.path.exists(RAW_DIR):
+            return False
+        for fn in os.listdir(RAW_DIR):
+            if fn.startswith(customer_id + '_') or fn.startswith(customer_id):
+                return True
+    except Exception:
+        return False
+    return False
+
+
+def flush_pipeline_buffer_once():
+    """Try to flush any buffered pipeline cache items to their target paths."""
+    if not os.path.exists(PIPELINE_BUFFER_DIR):
+        return 0
+    flushed = 0
+    for fn in sorted(os.listdir(PIPELINE_BUFFER_DIR)):
+        fp = os.path.join(PIPELINE_BUFFER_DIR, fn)
+        try:
+            with open(fp, 'r', encoding='utf-8') as f:
+                obj = json.load(f)
+            target = obj.get('target_path')
+            state = obj.get('state')
+            append_mode = obj.get('append', False)
+            records = obj.get('records')
+            if not target or state is None:
+                # malformed buffer, remove
+                os.remove(fp)
+                continue
+            # ensure dir exists and write
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            if append_mode and isinstance(records, list):
+                # append each record as ndjson
+                try:
+                    with open(target, 'a', encoding='utf-8') as tf:
+                        for rec in records:
+                            tf.write(json.dumps(rec, ensure_ascii=False) + '\n')
+                except Exception:
+                    # append failed; keep file for later retry
+                    print(f"[WARN] Append to {target} failed during flush; will retry later")
+                    continue
+            else:
+                with open(target, 'w', encoding='utf-8') as tf:
+                    json.dump(state, tf, ensure_ascii=False, indent=2)
+            os.remove(fp)
+            flushed += 1
+            print(f"[INFO] Flushed buffered pipeline cache to {target}")
+        except Exception as e:
+            print(f"[WARN] Failed to flush buffer file {fp}: {e}")
+            # keep file for later retry
+            continue
+    return flushed
+
+
+def _buffer_flush_worker():
+    import time
+    while True:
+        try:
+            cnt = flush_pipeline_buffer_once()
+            if cnt:
+                print(f"[INFO] Flushed {cnt} buffered pipeline cache items")
+        except Exception as e:
+            print(f"[ERROR] Buffer flush worker exception: {e}")
+        time.sleep(int(os.environ.get('PIPELINE_BUFFER_FLUSH_INTERVAL', '30')))
+
+
+@app.route('/api/flush-buffer', methods=['POST'])
+def flush_buffer_endpoint():
+    """Manual trigger to flush buffered pipeline cache items."""
+    try:
+        flushed = flush_pipeline_buffer_once()
+        return jsonify({'flushed': flushed}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# start background flush worker
+try:
+    os.makedirs(PIPELINE_BUFFER_DIR, exist_ok=True)
+    t_buf = threading.Thread(target=_buffer_flush_worker, daemon=True)
+    t_buf.start()
+    print(f"[INFO] Started pipeline buffer flush worker (dir={PIPELINE_BUFFER_DIR})")
+except Exception:
+    print("[WARN] Could not start pipeline buffer flush worker")
 
 
 @app.route('/api/data/<dataset>')
@@ -213,65 +360,104 @@ def run_generate():
     def run_generation():
         print("  [DEBUG] Generation thread started")
         socketio.emit('pipeline_log', {'level': 'info', 'message': 'Starting data generation pipeline...', 'timestamp': str(datetime.now())})
+        append_cache_log(customer_id, 'info', 'Starting data generation pipeline...')
         socketio.emit('pipeline_progress', {'stepId': 1, 'step': 'generate', 'progress': 0, 'status': 'running', 'pipelineStatus': 'running'})
+        update_cache_progress(customer_id, 1, 'generate', 0, 'running', 'running')
+        socketio.sleep(0.1)
         
         try:
             # Run generate_all.py
             env = os.environ.copy()
             env['PYTHONIOENCODING'] = 'utf-8'
+            env['PYTHONUNBUFFERED'] = '1'
             print("  [DEBUG] Executing generate_all.py with UTF-8 encoding")
             
-            socketio.emit('pipeline_log', {'level': 'info', 'message': 'Executing: python generate_all.py', 'timestamp': str(datetime.now())})
+            socketio.emit('pipeline_log', {'level': 'info', 'message': f'Executing: {sys.executable} generate_all.py --customer-id {customer_id}', 'timestamp': str(datetime.now())})
+            append_cache_log(customer_id, 'info', f'Executing: {sys.executable} generate_all.py --customer-id {customer_id}')
             socketio.emit('pipeline_progress', {'stepId': 1, 'step': 'generate', 'progress': 25, 'status': 'running'})
+            update_cache_progress(customer_id, 1, 'generate', 25, 'running')
+            socketio.sleep(0.1)
             
-            # call generator in per-customer mode (generator should support --customer-id)
-            result = subprocess.run(
-                ['python', os.path.join(BASE_DIR, 'generate_all.py'), '--customer-id', str(customer_id)],
-                capture_output=True,
+            # call generator in per-customer mode
+            cmd = [sys.executable, os.path.join(BASE_DIR, 'generate_all.py'), '--customer-id', str(customer_id)]
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 encoding='utf-8',
                 errors='replace',
+                bufsize=0,
                 env=env,
-                cwd=BASE_DIR
+                cwd=BASE_DIR,
+                universal_newlines=True
             )
-            
-            # Stream stdout logs
-            if result.stdout:
-                for line in result.stdout.split('\n'):
+
+            # Stream stdout/stderr lines in real-time
+            while True:
+                line = proc.stdout.readline()
+                if not line and proc.poll() is not None:
+                    break
+                if line:
+                    line = line.rstrip('\n\r')
                     if line.strip():
                         socketio.emit('pipeline_log', {'level': 'info', 'message': f'  {line}', 'timestamp': str(datetime.now())})
-                        print(f"  [STDOUT] {line}")
-            
+                        append_cache_log(customer_id, 'info', line)
+                        print(f"  [PROC] {line}")
+                        socketio.sleep(0.01)
+
+            rc = proc.wait()
             socketio.emit('pipeline_progress', {'stepId': 1, 'step': 'generate', 'progress': 75, 'status': 'running'})
-            
-            if result.returncode == 0:
+            update_cache_progress(customer_id, 1, 'generate', 75, 'running')
+            socketio.sleep(0.1)
+
+            if rc == 0:
                 print("  [DEBUG] Generation completed successfully")
                 socketio.emit('pipeline_log', {'level': 'success', 'message': 'Data generation completed successfully!', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'success', 'Data generation completed successfully!')
                 socketio.emit('pipeline_log', {'level': 'info', 'message': f'Generated files in: {RAW_DIR}', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'info', f'Generated files in: {RAW_DIR}')
                 socketio.emit('pipeline_progress', {'stepId': 1, 'step': 'generate', 'progress': 100, 'status': 'completed', 'pipelineStatus': 'idle'})
+                update_cache_progress(customer_id, 1, 'generate', 100, 'completed', 'idle')
             else:
-                print(f"  [DEBUG] Generation failed with return code {result.returncode}")
-                if result.stderr:
-                    for line in result.stderr.split('\n'):
-                        if line.strip():
-                            socketio.emit('pipeline_log', {'level': 'error', 'message': f'ERROR: {line}', 'timestamp': str(datetime.now())})
-                            print(f"  [STDERR] {line}")
-                socketio.emit('pipeline_log', {'level': 'error', 'message': f'Generation failed with code {result.returncode}', 'timestamp': str(datetime.now())})
+                print(f"  [DEBUG] Generation failed with return code {rc}")
+                socketio.emit('pipeline_log', {'level': 'error', 'message': f'Generation failed with code {rc}', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'error', f'Generation failed with code {rc}')
                 socketio.emit('pipeline_progress', {'stepId': 1, 'step': 'generate', 'progress': 0, 'status': 'failed', 'pipelineStatus': 'idle'})
+                update_cache_progress(customer_id, 1, 'generate', 0, 'failed', 'idle')
         except Exception as e:
             print(f"  [DEBUG] Exception in generation: {str(e)}")
             import traceback
             traceback.print_exc()
             socketio.emit('pipeline_log', {'level': 'error', 'message': f'Exception: {str(e)}', 'timestamp': str(datetime.now())})
+            append_cache_log(customer_id, 'error', f'Exception: {str(e)}')
             socketio.emit('pipeline_progress', {'stepId': 1, 'step': 'generate', 'progress': 0, 'status': 'failed', 'pipelineStatus': 'idle'})
+            update_cache_progress(customer_id, 1, 'generate', 0, 'failed', 'idle')
     
-    # Run in background thread
-    thread = threading.Thread(target=run_generation)
-    thread.daemon = True
-    thread.start()
-    print("  [DEBUG] Generation thread launched")
+    # Run generation as a socketio background task so emits run in eventlet context
+    try:
+        socketio.start_background_task(run_generation)
+        print("  [DEBUG] Generation background task launched via socketio")
+    except Exception:
+        th = threading.Thread(target=run_generation)
+        th.daemon = True
+        th.start()
+        print("  [WARN] socketio.start_background_task failed; launched plain thread")
     
     return jsonify({'status': 'started', 'message': 'Data generation pipeline started'})
+
+
+@app.route('/api/pipeline/state', methods=['GET'])
+def pipeline_state():
+    """Return cached pipeline state and whether raw dataset exists for a customer."""
+    customer_id = request.args.get('customer_id')
+    if not customer_id and request.is_json:
+        customer_id = (request.get_json(silent=True) or {}).get('customer_id')
+    if not customer_id:
+        return jsonify({'error': 'customer_id required'}), 400
+    cache = load_pipeline_cache(customer_id)
+    raw_present = is_raw_dataset_present(customer_id)
+    return jsonify({'customer_id': customer_id, 'cache': cache, 'raw_present': raw_present})
 
 
 @app.route('/api/pipeline/clean', methods=['POST'])
@@ -289,63 +475,89 @@ def run_clean():
     def run_cleaning():
         print("  [DEBUG] Cleaning thread started")
         socketio.emit('pipeline_log', {'level': 'info', 'message': 'Starting data cleaning pipeline...', 'timestamp': str(datetime.now())})
+        append_cache_log(customer_id, 'info', 'Starting data cleaning pipeline...')
         socketio.emit('pipeline_progress', {'stepId': 2, 'step': 'clean', 'progress': 0, 'status': 'running', 'pipelineStatus': 'running'})
+        update_cache_progress(customer_id, 2, 'clean', 0, 'running', 'running')
+        socketio.sleep(0.1)
         
         try:
             # Run clean_data.py
             env = os.environ.copy()
             env['PYTHONIOENCODING'] = 'utf-8'
+            env['PYTHONUNBUFFERED'] = '1'
             print("  [DEBUG] Executing clean_data.py with UTF-8 encoding")
             
             socketio.emit('pipeline_log', {'level': 'info', 'message': 'Executing: python pipeline/clean_data.py', 'timestamp': str(datetime.now())})
+            append_cache_log(customer_id, 'info', 'Executing: python pipeline/clean_data.py')
             socketio.emit('pipeline_progress', {'stepId': 2, 'step': 'clean', 'progress': 25, 'status': 'running'})
+            update_cache_progress(customer_id, 2, 'clean', 25, 'running')
+            socketio.sleep(0.1)
             
-            result = subprocess.run(
-                ['python', os.path.join(BASE_DIR, 'pipeline', 'clean_data.py'), '--customer-id', str(customer_id)],
-                capture_output=True,
+            cmd = [sys.executable, os.path.join(BASE_DIR, 'pipeline', 'clean_data.py'), '--customer-id', str(customer_id)]
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 encoding='utf-8',
                 errors='replace',
+                bufsize=0,
                 env=env,
-                cwd=BASE_DIR
+                cwd=BASE_DIR,
+                universal_newlines=True
             )
-            
-            # Stream stdout logs
-            if result.stdout:
-                for line in result.stdout.split('\n'):
+
+            while True:
+                line = proc.stdout.readline()
+                if not line and proc.poll() is not None:
+                    break
+                if line:
+                    line = line.rstrip('\n\r')
                     if line.strip():
                         socketio.emit('pipeline_log', {'level': 'info', 'message': f'  {line}', 'timestamp': str(datetime.now())})
-                        print(f"  [STDOUT] {line}")
-            
+                        append_cache_log(customer_id, 'info', line)
+                        print(f"  [PROC] {line}")
+                        socketio.sleep(0.01)
+
+            rc = proc.wait()
             socketio.emit('pipeline_progress', {'stepId': 2, 'step': 'clean', 'progress': 75, 'status': 'running'})
-            
-            if result.returncode == 0:
+            update_cache_progress(customer_id, 2, 'clean', 75, 'running')
+            socketio.sleep(0.1)
+
+            if rc == 0:
                 print("  [DEBUG] Cleaning completed successfully")
                 socketio.emit('pipeline_log', {'level': 'success', 'message': 'Data cleaning completed successfully!', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'success', 'Data cleaning completed successfully!')
                 socketio.emit('pipeline_log', {'level': 'info', 'message': f'Cleaned files in: {CLEAN_DIR}', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'info', f'Cleaned files in: {CLEAN_DIR}')
                 socketio.emit('pipeline_log', {'level': 'info', 'message': f'Logs generated in: {LOGS_DIR}', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'info', f'Logs generated in: {LOGS_DIR}')
                 socketio.emit('pipeline_progress', {'stepId': 2, 'step': 'clean', 'progress': 100, 'status': 'completed', 'pipelineStatus': 'idle'})
+                update_cache_progress(customer_id, 2, 'clean', 100, 'completed', 'idle')
             else:
-                print(f"  [DEBUG] Cleaning failed with return code {result.returncode}")
-                if result.stderr:
-                    for line in result.stderr.split('\n'):
-                        if line.strip():
-                            socketio.emit('pipeline_log', {'level': 'error', 'message': f'ERROR: {line}', 'timestamp': str(datetime.now())})
-                            print(f"  [STDERR] {line}")
-                socketio.emit('pipeline_log', {'level': 'error', 'message': f'Cleaning failed with code {result.returncode}', 'timestamp': str(datetime.now())})
+                print(f"  [DEBUG] Cleaning failed with return code {rc}")
+                socketio.emit('pipeline_log', {'level': 'error', 'message': f'Cleaning failed with code {rc}', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'error', f'Cleaning failed with code {rc}')
                 socketio.emit('pipeline_progress', {'stepId': 2, 'step': 'clean', 'progress': 0, 'status': 'failed', 'pipelineStatus': 'idle'})
+                update_cache_progress(customer_id, 2, 'clean', 0, 'failed', 'idle')
         except Exception as e:
             print(f"  [DEBUG] Exception in cleaning: {str(e)}")
             import traceback
             traceback.print_exc()
             socketio.emit('pipeline_log', {'level': 'error', 'message': f'Exception: {str(e)}', 'timestamp': str(datetime.now())})
+            append_cache_log(customer_id, 'error', f'Exception: {str(e)}')
             socketio.emit('pipeline_progress', {'stepId': 2, 'step': 'clean', 'progress': 0, 'status': 'failed', 'pipelineStatus': 'idle'})
+            update_cache_progress(customer_id, 2, 'clean', 0, 'failed', 'idle')
     
-    # Run in background thread
-    thread = threading.Thread(target=run_cleaning)
-    thread.daemon = True
-    thread.start()
-    print("  [DEBUG] Cleaning thread launched")
+    # Run cleaning as a socketio background task so emits run in eventlet context
+    try:
+        socketio.start_background_task(run_cleaning)
+        print("  [DEBUG] Cleaning background task launched via socketio")
+    except Exception:
+        th = threading.Thread(target=run_cleaning)
+        th.daemon = True
+        th.start()
+        print("  [WARN] socketio.start_background_task failed; launched plain thread")
     
     return jsonify({'status': 'started', 'message': 'Data cleaning pipeline started'})
 
@@ -365,62 +577,88 @@ def run_analytics():
     def run_analytics_gen():
         print("  [DEBUG] Analytics thread started")
         socketio.emit('pipeline_log', {'level': 'info', 'message': 'Starting analytics generation pipeline...', 'timestamp': str(datetime.now())})
+        append_cache_log(customer_id, 'info', 'Starting analytics generation pipeline...')
         socketio.emit('pipeline_progress', {'stepId': 3, 'step': 'analytics', 'progress': 0, 'status': 'running', 'pipelineStatus': 'running'})
+        update_cache_progress(customer_id, 3, 'analytics', 0, 'running', 'running')
+        socketio.sleep(0.1)
         
         try:
             # Run generate_summaries.py
             env = os.environ.copy()
             env['PYTHONIOENCODING'] = 'utf-8'
+            env['PYTHONUNBUFFERED'] = '1'
             print("  [DEBUG] Executing generate_summaries.py with UTF-8 encoding")
             
             socketio.emit('pipeline_log', {'level': 'info', 'message': 'Executing: python analytics/generate_summaries.py', 'timestamp': str(datetime.now())})
+            append_cache_log(customer_id, 'info', 'Executing: python analytics/generate_summaries.py')
             socketio.emit('pipeline_progress', {'stepId': 3, 'step': 'analytics', 'progress': 25, 'status': 'running'})
+            update_cache_progress(customer_id, 3, 'analytics', 25, 'running')
+            socketio.sleep(0.1)
             
-            result = subprocess.run(
-                ['python', os.path.join(BASE_DIR, 'analytics', 'generate_summaries.py'), '--customer-id', str(customer_id)],
-                capture_output=True,
+            cmd = [sys.executable, os.path.join(BASE_DIR, 'analytics', 'generate_summaries.py'), '--customer-id', str(customer_id)]
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 encoding='utf-8',
                 errors='replace',
+                bufsize=0,
                 env=env,
-                cwd=BASE_DIR
+                cwd=BASE_DIR,
+                universal_newlines=True
             )
-            
-            # Stream stdout logs
-            if result.stdout:
-                for line in result.stdout.split('\n'):
+
+            while True:
+                line = proc.stdout.readline()
+                if not line and proc.poll() is not None:
+                    break
+                if line:
+                    line = line.rstrip('\n\r')
                     if line.strip():
                         socketio.emit('pipeline_log', {'level': 'info', 'message': f'  {line}', 'timestamp': str(datetime.now())})
-                        print(f"  [STDOUT] {line}")
-            
+                        append_cache_log(customer_id, 'info', line)
+                        print(f"  [PROC] {line}")
+                        socketio.sleep(0.01)
+
+            rc = proc.wait()
             socketio.emit('pipeline_progress', {'stepId': 3, 'step': 'analytics', 'progress': 75, 'status': 'running'})
-            
-            if result.returncode == 0:
+            update_cache_progress(customer_id, 3, 'analytics', 75, 'running')
+            socketio.sleep(0.1)
+
+            if rc == 0:
                 print("  [DEBUG] Analytics completed successfully")
                 socketio.emit('pipeline_log', {'level': 'success', 'message': 'Analytics generation completed successfully!', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'success', 'Analytics generation completed successfully!')
                 socketio.emit('pipeline_log', {'level': 'info', 'message': f'Analytics files in: {ANALYTICS_DIR}', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'info', f'Analytics files in: {ANALYTICS_DIR}')
                 socketio.emit('pipeline_progress', {'stepId': 3, 'step': 'analytics', 'progress': 100, 'status': 'completed', 'pipelineStatus': 'idle'})
+                update_cache_progress(customer_id, 3, 'analytics', 100, 'completed', 'idle')
             else:
-                print(f"  [DEBUG] Analytics failed with return code {result.returncode}")
-                if result.stderr:
-                    for line in result.stderr.split('\n'):
-                        if line.strip():
-                            socketio.emit('pipeline_log', {'level': 'error', 'message': f'ERROR: {line}', 'timestamp': str(datetime.now())})
-                            print(f"  [STDERR] {line}")
-                socketio.emit('pipeline_log', {'level': 'error', 'message': f'Analytics failed with code {result.returncode}', 'timestamp': str(datetime.now())})
+                print(f"  [DEBUG] Analytics failed with return code {rc}")
+                socketio.emit('pipeline_log', {'level': 'error', 'message': f'Analytics failed with code {rc}', 'timestamp': str(datetime.now())})
+                append_cache_log(customer_id, 'error', f'Analytics failed with code {rc}')
                 socketio.emit('pipeline_progress', {'stepId': 3, 'step': 'analytics', 'progress': 0, 'status': 'failed', 'pipelineStatus': 'idle'})
+                update_cache_progress(customer_id, 3, 'analytics', 0, 'failed', 'idle')
         except Exception as e:
-            print(f"  [DEBUG] Exception in analytics: {str(e)}")
+            print("  [DEBUG] Exception in analytics: {str(e)}")
             import traceback
             traceback.print_exc()
             socketio.emit('pipeline_log', {'level': 'error', 'message': f'Exception: {str(e)}', 'timestamp': str(datetime.now())})
+            append_cache_log(customer_id, 'error', f'Exception: {str(e)}')
             socketio.emit('pipeline_progress', {'stepId': 3, 'step': 'analytics', 'progress': 0, 'status': 'failed', 'pipelineStatus': 'idle'})
+            update_cache_progress(customer_id, 3, 'analytics', 0, 'failed', 'idle')
     
-    # Run in background thread
-    thread = threading.Thread(target=run_analytics_gen)
-    thread.daemon = True
-    thread.start()
-    print("  [DEBUG] Analytics thread launched")
+    # Run analytics as a socketio background task so emits run in eventlet context
+    try:
+        socketio.start_background_task(run_analytics_gen)
+        print("  [DEBUG] Analytics background task launched via socketio")
+    except Exception:
+        # fallback to plain thread if start_background_task not available
+        th = threading.Thread(target=run_analytics_gen)
+        th.daemon = True
+        th.start()
+        print("  [WARN] socketio.start_background_task failed; launched plain thread")
     
     return jsonify({'status': 'started', 'message': 'Analytics generation pipeline started'})
 
@@ -508,6 +746,60 @@ def get_analytics():
     print(f"      - OCEN: {ocen_raw.get('total_applications', 0)}")
     print(f"      - ONDC: {ondc_raw.get('total_orders', 0)}")
     return jsonify(normalized)
+
+
+@app.route('/api/earnings-spendings')
+def get_earnings_spendings():
+    """Get earnings vs spendings financial metrics for a specific customer."""
+    customer_id = request.args.get('customer_id', 'CUST_MSM_00001')
+    print(f"\n[REQUEST] GET /api/earnings-spendings?customer_id={customer_id}")
+    
+    filename = f'{customer_id}_earnings_spendings.json'
+    filepath = os.path.join(ANALYTICS_DIR, filename)
+    
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        print(f"  [✓] Loaded {filename}")
+        return jsonify(data)
+    except FileNotFoundError:
+        print(f"  [!] File not found: {filename}")
+        return jsonify({'error': f'Earnings vs Spendings data not found for {customer_id}. Please generate analytics first.'}), 404
+    except Exception as e:
+        print(f"  [ERROR] Failed to load {filename}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ingest/gst', methods=['POST'])
+def ingest_gst():
+    """Ingest GST records (accepts single object or list). Attempts to append to raw_gst.ndjson; on failure buffers to disk for later flush."""
+    payload = request.get_json()
+    if payload is None:
+        return jsonify({'error': 'No JSON payload provided'}), 400
+
+    records = payload if isinstance(payload, list) else [payload]
+    target = os.path.join(RAW_DIR, 'raw_gst.ndjson')
+
+    try:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, 'a', encoding='utf-8') as f:
+            for rec in records:
+                f.write(json.dumps(rec, ensure_ascii=False) + '\n')
+        return jsonify({'status': 'ok', 'written': len(records)}), 200
+    except Exception as e:
+        # buffer to PIPELINE_BUFFER_DIR for later flush
+        try:
+            os.makedirs(PIPELINE_BUFFER_DIR, exist_ok=True)
+            fname = f"buffer_ingest_gst_{datetime.utcnow().strftime('%Y%m%dT%H%M%S%f')}.json"
+            bufpath = os.path.join(PIPELINE_BUFFER_DIR, fname)
+            with open(bufpath, 'w', encoding='utf-8') as bf:
+                json.dump({'target_path': target, 'append': True, 'records': records}, bf, ensure_ascii=False, indent=2)
+            print(f"[WARN] Ingest write failed; buffered {len(records)} GST records to {bufpath}")
+            return jsonify({'status': 'buffered', 'buffer_file': bufpath}), 202
+        except Exception as e2:
+                print(f"[ERROR] Failed to buffer ingest payload: {e2}")
+                return jsonify({'error': str(e2)}), 500
+    
 
 
 @app.route('/api/ai-insights', methods=['POST'])
@@ -895,4 +1187,7 @@ if __name__ == '__main__':
     print("  Press Ctrl+C to stop the server\n")
     print("="*80 + "\n")
     
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    # Prevent the Flask development reloader from restarting the process when
+    # analytics writes files (which previously caused connection drops).
+    debug_mode = bool(int(os.environ.get('FLASK_DEBUG', '1')))
+    socketio.run(app, debug=debug_mode, host='0.0.0.0', port=5000, use_reloader=False, allow_unsafe_werkzeug=True)

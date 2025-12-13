@@ -1,0 +1,594 @@
+{
+  "customer_id": "CUST_MSM_00001",
+  "logs": [
+    {
+      "timestamp": "2025-12-12T20:51:22.335595Z",
+      "level": "info",
+      "message": "Starting data generation pipeline..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:22.533536Z",
+      "level": "info",
+      "message": "Executing: F:\\MSMELending\\data_lake\\venv\\Scripts\\python.exe generate_all.py --customer-id CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:22.870948Z",
+      "level": "info",
+      "message": "╔════════════════════════════════════════════════════════════════════════════╗"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:22.940050Z",
+      "level": "info",
+      "message": "║                                                                            ║"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.006297Z",
+      "level": "info",
+      "message": "║          🏦 INDIAN FINANCIAL DATA LAKE - SYNTHETIC DATA GENERATOR          ║"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.070214Z",
+      "level": "info",
+      "message": "║                                                                            ║"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.135926Z",
+      "level": "info",
+      "message": "║   Simulating AA/FIP, GST, Bureau, Insurance, Mutual Funds, ONDC, OCEN     ║"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.214344Z",
+      "level": "info",
+      "message": "║                                                                            ║"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.274280Z",
+      "level": "info",
+      "message": "╚════════════════════════════════════════════════════════════════════════════╝"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.329414Z",
+      "level": "info",
+      "message": "[START TIME] 2025-12-13 02:21:22"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.381020Z",
+      "level": "info",
+      "message": "[NOTE] Running generation for customer_id=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.431126Z",
+      "level": "info",
+      "message": "[STEP 0] Loading configuration..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.496154Z",
+      "level": "info",
+      "message": "📊 Configuration:"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.559094Z",
+      "level": "info",
+      "message": "  • Users: 1,000"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.608704Z",
+      "level": "info",
+      "message": "  • Bank Accounts: 1,500"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.656904Z",
+      "level": "info",
+      "message": "  • Transactions: 50,000"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.704998Z",
+      "level": "info",
+      "message": "  • Date Range: 2022-01-01 to 2025-12-11"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.755537Z",
+      "level": "info",
+      "message": "  • Banks: HDFC, ICICI, SBI... (7 total)"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.806168Z",
+      "level": "info",
+      "message": "🔧 Messiness Configuration:"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.869755Z",
+      "level": "info",
+      "message": "  • Date format variation: True"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.934433Z",
+      "level": "info",
+      "message": "  • Numeric inconsistency: True"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:23.997005Z",
+      "level": "info",
+      "message": "  • Missing fields: 0.15"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.048496Z",
+      "level": "info",
+      "message": "  • Duplicates: 0.02"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.108033Z",
+      "level": "info",
+      "message": "📋 Generation Plan:"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.161649Z",
+      "level": "info",
+      "message": "  Total steps to execute: 4"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.218446Z",
+      "level": "info",
+      "message": "    1. Step 1: Banking Data (Consents, Accounts, Transactions)"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.273237Z",
+      "level": "info",
+      "message": "    2. Step 2: GST & Credit Bureau Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.324237Z",
+      "level": "info",
+      "message": "    3. Step 3: Insurance & Mutual Fund Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.385080Z",
+      "level": "info",
+      "message": "    4. Step 4: ONDC & OCEN Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.446278Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.508736Z",
+      "level": "info",
+      "message": "  🚀 STARTING DATA GENERATION"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.569385Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.621605Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.681244Z",
+      "level": "info",
+      "message": "  📦 Step 1: Banking Data (Consents, Accounts, Transactions)"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.742952Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.804787Z",
+      "level": "info",
+      "message": "  [DEBUG] Script path: generators/generate_banking_data.py"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.857350Z",
+      "level": "info",
+      "message": "  [DEBUG] Reading script..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.906378Z",
+      "level": "info",
+      "message": "  [DEBUG] Executing script..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:24.962160Z",
+      "level": "info",
+      "message": "  [SEED] Using seed 2803698874 from customer_id=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:25.025679Z",
+      "level": "info",
+      "message": "Starting data generation..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:25.089954Z",
+      "level": "info",
+      "message": "Configuration: {'users': 1000, 'bank_accounts': 1500, 'transactions': 50000, 'gst_profiles': 500, 'credit_reports': 800, 'insurance_policies': 1000, 'mutual_fund_portfolios': 500, 'ondc_orders': 2000, 'ocen_applications': 300}"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:25.154547Z",
+      "level": "info",
+      "message": "[1/9] Generating user IDs..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:25.206405Z",
+      "level": "info",
+      "message": "[2/9] Generating consent artefacts..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:25.258509Z",
+      "level": "info",
+      "message": "  Generated 1509 consent artefacts"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:25.310820Z",
+      "level": "info",
+      "message": "[3/9] Generating bank accounts..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:25.362710Z",
+      "level": "info",
+      "message": "  Generated 1500 bank accounts"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:25.412394Z",
+      "level": "info",
+      "message": "[4/9] Generating transactions (this may take a while)..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:28.594262Z",
+      "level": "info",
+      "message": "  Generated 49928 transactions"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:28.659188Z",
+      "level": "info",
+      "message": "Raw data generation completed!"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:28.725892Z",
+      "level": "info",
+      "message": "Files saved in 'raw/' directory"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:28.797373Z",
+      "level": "info",
+      "message": "  ✅ Step 1: Banking Data (Consents, Accounts, Transactions) completed successfully in 5.70 seconds"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:28.865856Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:28.933008Z",
+      "level": "info",
+      "message": "  📦 Step 2: GST & Credit Bureau Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:29.010296Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:29.096457Z",
+      "level": "info",
+      "message": "  [DEBUG] Script path: generators/generate_additional_data.py"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:29.166327Z",
+      "level": "info",
+      "message": "  [DEBUG] Reading script..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:29.242326Z",
+      "level": "info",
+      "message": "  [DEBUG] Executing script..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:29.319462Z",
+      "level": "info",
+      "message": "  [SEED] Using seed 2803698874 from customer_id=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-12T20:51:29.384601Z",
+      "level": "info",
+      "message": "Generating additional datasets..."
+    },
+    {
+      "timestamp": "2025-12-12T20:51:29.464845Z",
+      "level": "info",
+      "message": "[1/3] Generating GST returns..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:51.700260Z",
+      "level": "info",
+      "message": "  Generated 24000 GST returns"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:51.773501Z",
+      "level": "info",
+      "message": "[2/3] Generating credit bureau reports..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.205810Z",
+      "level": "info",
+      "message": "  Generated 845 credit reports"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.272141Z",
+      "level": "info",
+      "message": "Additional data generation completed!"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.572213Z",
+      "level": "info",
+      "message": "  ✅ Step 2: GST & Credit Bureau Data completed successfully in 83.93 seconds"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.649819Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.724490Z",
+      "level": "info",
+      "message": "  📦 Step 3: Insurance & Mutual Fund Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.789148Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.861991Z",
+      "level": "info",
+      "message": "  [DEBUG] Script path: generators/generate_insurance_mf.py"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.927744Z",
+      "level": "info",
+      "message": "  [DEBUG] Reading script..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:52.993205Z",
+      "level": "info",
+      "message": "  [DEBUG] Executing script..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:53.074789Z",
+      "level": "info",
+      "message": "  [SEED] Using seed 2803698874 from customer_id=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:53.149530Z",
+      "level": "info",
+      "message": "Generating insurance and mutual fund datasets..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:53.227321Z",
+      "level": "info",
+      "message": "[1/2] Generating insurance policies..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:53.305534Z",
+      "level": "info",
+      "message": "  Generated 1000 insurance policies"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:53.378266Z",
+      "level": "info",
+      "message": "[2/2] Generating mutual fund portfolios..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:56.853332Z",
+      "level": "info",
+      "message": "  Generated 500 mutual fund portfolios"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:56.931324Z",
+      "level": "info",
+      "message": "Insurance and MF data generation completed!"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.005897Z",
+      "level": "info",
+      "message": "  ✅ Step 3: Insurance & Mutual Fund Data completed successfully in 4.29 seconds"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.068463Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.133525Z",
+      "level": "info",
+      "message": "  📦 Step 4: ONDC & OCEN Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.212187Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.289363Z",
+      "level": "info",
+      "message": "  [DEBUG] Script path: generators/generate_ondc_ocen.py"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.373824Z",
+      "level": "info",
+      "message": "  [DEBUG] Reading script..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.441462Z",
+      "level": "info",
+      "message": "  [DEBUG] Executing script..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.507675Z",
+      "level": "info",
+      "message": "  [SEED] Using seed 2803698874 from customer_id=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.573805Z",
+      "level": "info",
+      "message": "Generating ONDC and OCEN datasets..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.656338Z",
+      "level": "info",
+      "message": "[1/2] Generating ONDC orders..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.732552Z",
+      "level": "info",
+      "message": "  Generated 2000 ONDC orders"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.804261Z",
+      "level": "info",
+      "message": "[2/2] Generating OCEN loan applications..."
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.875566Z",
+      "level": "info",
+      "message": "  Generated 300 OCEN loan applications"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:57.945147Z",
+      "level": "info",
+      "message": "ONDC and OCEN data generation completed!"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.007847Z",
+      "level": "info",
+      "message": "  ✅ Step 4: ONDC & OCEN Data completed successfully in 0.60 seconds"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.085725Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.151146Z",
+      "level": "info",
+      "message": "  📊 GENERATION SUMMARY"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.228754Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.300383Z",
+      "level": "info",
+      "message": "📈 Results:"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.365135Z",
+      "level": "info",
+      "message": "  ✅ Step 1: SUCCESS  | Step 1: Banking Data (Consents, Accounts, Transactions)"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.430968Z",
+      "level": "info",
+      "message": "  ✅ Step 2: SUCCESS  | Step 2: GST & Credit Bureau Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.497338Z",
+      "level": "info",
+      "message": "  ✅ Step 3: SUCCESS  | Step 3: Insurance & Mutual Fund Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.564046Z",
+      "level": "info",
+      "message": "  ✅ Step 4: SUCCESS  | Step 4: ONDC & OCEN Data"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.661606Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.752220Z",
+      "level": "info",
+      "message": "  ⏱️  Total time: 0:01:34.556612"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.819450Z",
+      "level": "info",
+      "message": "  [END TIME] 2025-12-13 02:22:57"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.880114Z",
+      "level": "info",
+      "message": "================================================================================"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:58.940096Z",
+      "level": "info",
+      "message": "  📊 4/4 steps completed successfully"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.011089Z",
+      "level": "info",
+      "message": "  🎉 ALL RAW DATA GENERATED SUCCESSFULLY!"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.088037Z",
+      "level": "info",
+      "message": "  📋 Next steps:"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.165763Z",
+      "level": "info",
+      "message": "    1. Run: python pipeline\\clean_data.py"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.237165Z",
+      "level": "info",
+      "message": "       → Clean and standardize raw data"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.301226Z",
+      "level": "info",
+      "message": "    2. Run: python analytics\\generate_summaries.py"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.360218Z",
+      "level": "info",
+      "message": "       → Generate statistics and analytics"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.427106Z",
+      "level": "info",
+      "message": "    3. Run: python api_panel\\app.py"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.487923Z",
+      "level": "info",
+      "message": "       → Launch web debug panel at http://localhost:5000"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.705702Z",
+      "level": "success",
+      "message": "Data generation completed successfully!"
+    },
+    {
+      "timestamp": "2025-12-12T20:52:59.770898Z",
+      "level": "info",
+      "message": "Generated files in: F:\\MSMELending\\data_lake\\raw"
+    }
+  ],
+  "steps": {
+    "1": {
+      "step": "generate",
+      "progress": 100,
+      "status": "completed"
+    }
+  },
+  "pipelineStatus": "idle",
+  "last_updated": "2025-12-12T20:52:59.830884Z"
+}

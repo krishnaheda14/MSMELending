@@ -1,474 +1,385 @@
-# MSME Lending Solution - Indian Financial Data Lake
+# MSME Lending Solution — Indian Financial Data Lake
 
-## Overview
+## Problem Statement
 
-This is a **complete MSME lending decision engine** that simulates the **Account Aggregator (AA) Framework** for credit underwriting. It demonstrates:
+**Challenge**: Traditional MSME lending in India faces critical barriers:
+- Manual, paper-heavy credit assessment leads to weeks-long approval cycles
+- Single-source bureau scores (CIBIL) miss 70% of the real financial picture
+- No unified view of banking, GST, insurance, mutual funds, ONDC, OCEN data
+- DPDP Act 2023 mandates explicit per-customer consent — bulk data operations prohibited
+- RBI Account Aggregator Framework requires standardized multi-FIP data fetching
 
-**One Borrower → One Consent → One Dataset → One Analytics Package**
-
-The system generates synthetic data and provides **per-customer analytics** for loan decisioning, following:
-- 🏛️ **RBI Account Aggregator Framework**
-- 🔒 **Digital Personal Data Protection Act (DPDP) 2023**
-- 📊 **Multi-source financial data aggregation** (Bank, GST, Bureau, Insurance, MF, ONDC, OCEN)
-
----
-
-## 🎯 Solution Architecture
-
-```
-Step 1: Customer Consent (AA Framework) → 
-Step 2: Data Fetch (Banking, GST, Bureau) → 
-Step 3: Clean & Validate → 
-Step 4: Analytics & Insights → 
-Step 5: Credit Scoring → 
-Step 6: Loan Decision
-```
-
-**The Lending Journey**:
-1. **Customer Consent**: Borrower grants consent via AA app to access financial data
-2. **Data Fetch**: System fetches data from multiple FIPs (Financial Information Providers)
-3. **Clean & Validate**: Raw data is standardized and validated for quality
-4. **Analytics**: Generate cashflow, turnover, spending patterns, and anomaly detection
-5. **Credit Scoring**: Calculate custom risk scores (not bureau score)
-6. **Loan Decision**: Review analytics and scores to approve/reject loan application
-
-**Key Principle**: All operations are **per-customer only**. Bulk data operations are prohibited (DPDP compliance).
-
-For complete flow documentation, see: [CUSTOMER_LENDING_FLOW.md](docs/CUSTOMER_LENDING_FLOW.md)
+**Business Impact**:
+- 50+ day average loan turnaround for MSMEs
+- 40% rejection rate due to incomplete financial visibility
+- Manual underwriting prone to bias and errors
+- Cannot scale to millions of MSME borrowers
 
 ---
 
-## 📊 Data Sources (Per Customer)
+## Proposed Solution
 
-### 1. **Consent Artefacts** (RBI AA Framework)
-Digital consent for financial data sharing
-- Schema: `schemas/consent_schema.json`
-- Per customer: 1 consent record
+A comprehensive MSME credit decisioning platform leveraging:
 
-### 2. **Banking Data** (Account Aggregator)
-Multi-bank transactions from HDFC, ICICI, SBI, Axis, Kotak, etc.
-- **Accounts**: 2-5 per customer
-- **Transactions**: 500-5000 per customer (6-12 months)
-- Schemas: `schemas/account_schema.json`, `schemas/transaction_schema.json`
-- **Analytics**: Cashflow, income detection, expense patterns
+### 1. Account Aggregator (AA) Framework Integration
+- One Borrower → One Consent → One Dataset
+- Compliant with RBI AA specs and DPDP Act 2023
+- Fetch multi-source financial data: Banking, GST, Bureau, Insurance, MF, ONDC, OCEN
 
-### 3. **GST Returns** (GSTN Integration)
-GSTR-1, GSTR-3B filings with invoice details
-- **Returns**: 12-24 per customer (monthly)
-- Schema: `schemas/gst_schema.json`
-- **Analytics**: Business turnover, tax compliance, revenue trends
+### 2. AI-Powered Multi-Source Analytics
+- 7 data sources aggregated per customer (vs. traditional 1-2)
+- Automated cashflow analysis, GST compliance scoring, anomaly detection
+- Composite credit scoring combining:
+  - Cashflow Stability (45% weight) — transaction patterns, income/expense ratios
+  - Business Health (35% weight) — GST turnover, ONDC order diversity, MF investments
+  - Debt Capacity (20% weight) — credit utilization, OCEN approval rate, insurance coverage
 
-### 4. **Credit Bureau Reports**
-CIBIL/Experian-style reports with DPD grids
-- **Reports**: 1-4 per customer
-- Schema: `schemas/credit_report_schema.json`
-- **Analytics**: Credit score, existing debt, repayment history
+### 3. Explainable AI & Transparency
+- Click-to-reveal calculation breakdowns for every metric
+- Separate Methodology and Calculations tabs showing real numbers and formulas
+- Debug panels in charts for raw data inspection
+- All metrics include: Formula, Breakdown with actual values, Risk interpretation
 
-### 5. **Insurance Policies**
-Life, Health, Vehicle, Term policies
-- **Policies**: 0-3 per customer
-- Schema: `schemas/insurance_schema.json`
-- **Analytics**: Financial discipline, asset ownership
-
-### 6. **Mutual Funds**
-AMC holdings, SIP investments
-- **Holdings**: 0-10 per customer
-- Schema: `schemas/mutual_fund_schema.json`
-- **Analytics**: Savings behavior, liquidity
-
-### 7. **ONDC Orders** (E-commerce)
-Beckn protocol orders (for online sellers)
-- **Orders**: 0-100 per customer
-- Schema: `schemas/ondc_schema.json`
-- **Analytics**: Business activity for merchants
-
-### 8. **OCEN Loan Applications**
-Previous loan applications
-- **Applications**: 0-5 per customer
-- Schema: `schemas/ocen_schema.json`
-- **Analytics**: Loan stacking detection
+### 4. Pre-loaded Demo Datasets for Quick Demonstration
+- 10 customer profiles with varying risk levels and specialized behaviors
+- Range from excellent borrowers to high-risk cases with edge scenarios
+- Profiles include: High Seasonality, High Debt, Growing Business, Declining Business, etc.
+- See `data_lake/docs/CUSTOMER_PROFILES.md` for detailed descriptions
 
 ---
 
-## 🔧 Installation & Setup
+## Implementation
 
-### Prerequisites
-- Python 3.11+
-- Node.js 16+ (for React frontend)
-- 4GB+ RAM
-- 5GB+ disk space
+### Demo Flow (Current Setup)
 
-### Backend Setup
-```bash
-cd data_lake
+**Pre-loaded Datasets**: 10 customer profiles (CUST_MSM_00001 through CUST_MSM_00010) are already generated and stored in `data_lake/raw/`. Each represents different lending scenarios.
 
-# Create virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Linux/Mac
-
-# Install dependencies
-pip install -r requirements.txt
+**Pipeline Flow**:
+```
+Customer Selection (choose from 00001-00010)
+         ↓
+Step 1: Consent Validation (simulated AA consent check)
+         ↓
+Step 2: Clean & Validate Data (remove outliers, standardize formats)
+         ↓
+Step 3: Generate Analytics (calculate 7-source summaries + earnings/spendings)
+         ↓
+Step 4: Calculate Credit Score (composite weighted score + AI insights)
+         ↓
+Lending Decision (Approve / Review / Reject)
 ```
 
-### Frontend Setup
-```bash
-cd frontend
-npm install
+### Architecture
+
 ```
+┌─────────────────┐
+│  10 Pre-loaded  │  Demo Customer Datasets
+│  Customer       │  (CUST_MSM_00001 - CUST_MSM_00010)
+│  Profiles       │  Different risk profiles: seasonal, high-debt, growth, stable, etc.
+└─────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│  Simulated AA Data (stored in data_lake/raw/)        │
+│  • Banking (Accounts & Transactions)                 │
+│  • GST (GSTR-1, GSTR-3B with monthly aggregation)    │
+│  • Credit Bureau (CIBIL/Experian-style reports)      │
+│  • Insurance (Life, Health, Vehicle policies)        │
+│  • Mutual Funds (AMC holdings, SIPs)                 │
+│  • ONDC (Beckn protocol orders)                      │
+│  • OCEN (loan applications)                          │
+└──────────────────────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────────┐
+│  Data Pipeline (per-customer)                        │
+│  1. Clean & Validate (schemas + error logs)          │
+│  2. Generate Analytics (7 summaries + overall)       │
+│  3. AI Insights (Deepseek/Gemini - lending reco)     │
+│  4. Calculate Credit Score (composite weighted)      │
+└──────────────────────────────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────────┐
+│  Frontend Dashboard                                  │
+│  • Lending Analytics & AI Insights (main view)       │
+│  • Earnings vs Spendings (detailed financial health) │
+│  • Credit Methodology (explainability doc)           │
+│  • Credit Calculations (numeric examples)            │
+│  • Pipeline Monitor (real-time progress)             │
+│  • Dataset Viewer (raw/clean data inspection)        │
+└──────────────────────────────────────────────────────┘
+```
+
+### Technology Stack
+
+**Backend**:
+- Python 3.11+ (Flask, SocketIO)
+- NDJSON for raw/clean data storage
+- JSON for analytics summaries
+- AI providers: Deepseek (primary), Google Gemini (fallback)
+
+**Frontend**:
+- React 18, Tailwind CSS
+- Recharts for visualizations
+- Axios for API calls
+- WebSocket (Socket.IO client) for pipeline updates
+
+**Data Generation**:
+- Realistic Indian data patterns (PAN, GSTIN, IFSC, mobile, addresses)
+- Per-customer seeding (hash of customer_id → unique deterministic data)
+- Configurable messiness (date format variation, missing fields, duplicates)
+- Specialized profile modifications (seasonality, debt, growth patterns)
+
+---
+
+## Features Implemented
+
+### Data Sources (Per Customer)
+1. **Consent Artefacts** — RBI AA Framework digital consent
+2. **Banking** — 2-5 accounts, 50,000 transactions (multiple years)
+3. **GST Returns** — 5,000 returns with monthly aggregation to prevent inflation
+4. **Credit Bureau** — 843 credit report entries with simulated bureau scores
+5. **Insurance** — 0-1,000 policies (Life, Health, Vehicle)
+6. **Mutual Funds** — 0-425 portfolios (AMC, SIPs)
+7. **ONDC Orders** — 100-1,903 orders (Beckn protocol, for sellers)
+8. **OCEN Applications** — 10-272 loan applications
+
+### Analytics Engine
+- **Overall Summary** — composite score + methodology with business health calculation
+- **Transaction Summary** — cashflow, income/expense, inflow/outflow ratios
+- **Earnings vs Spendings** — comprehensive financial analysis with 30+ metrics:
+  - **Cashflow Metrics**: Inflow/Outflow Ratio, Net Surplus, Surplus Ratio, Income Stability CV, Seasonality Index
+  - **Growth Metrics**: Credit Growth Rate, TTM Revenue Growth, QoQ Revenue Growth, Expense Growth Rate, Profit Margin
+  - **Credit Scores**: Bounce Count, EMI Consistency, Credit Utilization Ratio, Default Probability Score, Debt-to-Income Ratio, Payment Regularity Score, Loan Repayment Rate
+  - **Business Health**: GST vs Bank Reconciliation, Working Capital Gap (days), Annual Operating Cashflow
+  - **All metrics include**: Formula, Breakdown with actual dataset values, Risk interpretation
+- **GST Summary** — turnover (monthly aggregated to prevent inflation), returns count, state distribution
+- **Credit Summary** — bureau score, utilization, open loans
+- **Anomaly Detection** — high-value transactions, unusual patterns
+- **Mutual Funds Summary** — invested amount, returns, portfolios
+- **Insurance Summary** — total coverage, premium paid, policies
+- **ONDC Summary** — order volume, provider diversity, category breakdown
+- **OCEN Summary** — application count, approval rates, loan amounts
+
+### Frontend Dashboard
+- **Lending Analytics & AI Insights** — main view with:
+  - Prominent credit score display with click-to-expand component derivations
+  - Transaction, GST, ONDC, Mutual Funds, Insurance, OCEN, Anomaly cards
+  - Debug panel in GST section (collapsible raw data inspector)
+  - AI-generated lending recommendation (formatted with bold/lists)
+  - Enter key submit on customer ID input
+- **Earnings vs Spendings** — comprehensive financial analysis page:
+  - Customer ID prominently displayed at top with generation timestamp
+  - Final Assessment moved to top for immediate visibility
+  - Positive/Negative indicators count displayed
+  - 30+ financial metrics with interactive info buttons
+  - Click any ℹ️ button to see: Formula, Breakdown with actual values, Risk explanation
+  - Monthly cashflow display with expand/collapse functionality (first 10 items shown)
+  - All currency values formatted with thousand separators
+- **Credit Methodology** — comprehensive explainability document
+- **Credit Calculations** — per-customer numeric examples with simple walkthrough
+- **Pipeline Monitor** — live progress bars for generate/clean/analytics/calculate steps:
+  - On-demand customer generation — click to generate random customer IDs
+  - Real-time execution debugging — shows current step and exact command running
+  - Collapsible debug panel — displays pipeline status and steps completed
+  - Live logs with timestamps — color-coded by severity (error/warning/success/info)
+  - Specialized customer profile selection (High Seasonality, High Debt, Growth, etc.)
+- **Dataset Viewer** — raw/clean data inspection with limits
+
+### AI Integration
+- **Deepseek API** (primary) — OpenAI-compatible endpoint
+- **Google Gemini** (fallback) — robust parsing for varied response shapes
+- Automatic fallback if Deepseek fails
+- Token limits enforced (prompt + response configurable via env)
+
+### Compliance & Security
+- **DPDP Act 2023**: All operations require explicit `customer_id` — no bulk queries
+- **RBI AA Framework**: Simulated consent flow and multi-FIP data aggregation
+- `.gitignore` excludes raw data files (`data_lake/raw/*.ndjson`)
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites Setup
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- Git
 
-**One-Time Data Generation** (Run once to create the dataset):
+### 1. Clone Repository
 ```bash
-cd data_lake
-venv\Scripts\activate
-python generate_all.py
+git clone https://github.com/krishnaheda14/MSMELending.git
+cd MSMELending/data_lake
 ```
-This creates all raw data files in `raw/` directory. You only need to do this once.
 
----
-
-### Daily Usage: Process Customer Applications
-
-1. **Start Backend**:
+### 2. Setup Backend
 ```bash
-cd data_lake
-venv\Scripts\activate
-python api_panel\app.py
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Create .env file with API keys
+echo "DEEPSEEK_API_KEY=sk-553a2062a03e4a88aec97575bd25d268" > .env
+echo "GEMINI_API_KEY=your_gemini_key_here" >> .env
 ```
-Backend runs at: http://localhost:5000
 
-2. **Start Frontend** (new terminal):
+### 3. Generate Data for a Customer
 ```bash
-cd data_lake\frontend
+# Generate raw data for CUST_MSM_00001
+python generate_all.py --customer-id CUST_MSM_00001
+
+# Clean the data
+python pipeline/clean_data.py --customer-id CUST_MSM_00001
+
+# Generate analytics
+python analytics/generate_summaries.py --customer-id CUST_MSM_00001
+```
+
+### 4. Start Backend API
+```bash
+cd api_panel
+python app.py
+```
+Backend runs at `http://localhost:5000`
+
+### 5. Start Frontend
+```bash
+cd ../frontend
+npm install
 npm start
 ```
-Frontend runs at: http://localhost:3000
+Frontend runs at `http://localhost:3000`
 
-3. **Process Loan Applications** (The Real Flow):
-   - **Step 1**: Enter Customer ID (e.g., CUST_MSM_00001)
-   - **Step 2**: Click "Validate Consent & Fetch Data" - System simulates fetching data from AA
-   - **Step 3**: Click "Clean & Validate Data" - System standardizes raw banking/GST/bureau data
-   - **Step 4**: Click "Generate Analytics & Credit Score" - System analyzes cashflow, turnover, anomalies
-   - **Step 5**: Review credit score and risk assessment
-   - **Step 6**: Make lending decision (approve/reject) based on insights
+### 6. Open Dashboard
+- Navigate to `http://localhost:3000`
+- Enter customer ID (e.g., `CUST_MSM_00001`) and press **Enter** or click "Load Analytics"
+- Click "Get AI Insights" for lending recommendation
+- Explore Methodology and Calculations tabs
 
 ---
 
-### The Complete AA-Based Lending Flow
+## 📖 Usage Guide
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│ STEP 1: Customer Consent (AA App)                                  │
-│ - Borrower opens AA app and grants consent                        │
-│ - Consent covers: Bank, GST, Credit Bureau, Insurance             │
-│ - Valid for: 6 months                                              │
-└─────────────────────────────────────────────────────────────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│ STEP 2: Data Fetch from Multiple Sources                           │
-│ - Banking: Last 12 months transactions from all accounts          │
-│ - GST: Last 24 months GSTR-1 and GSTR-3B filings                 │
-│ - Bureau: Latest credit report with existing loans                │
-│ - Insurance: Active policies                                       │
-└─────────────────────────────────────────────────────────────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│ STEP 3: Clean & Validate (Your Action)                            │
-│ - Standardize dates: "4 Nov 25" → "2025-11-04"                   │
-│ - Parse amounts: "₹1,250.00 Dr" → -1250.0                        │
-│ - Categorize transactions: UPI/Amazon → SHOPPING                  │
-│ - Flag missing/duplicate data                                      │
-└─────────────────────────────────────────────────────────────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│ STEP 4: Generate Analytics & Insights (Your Action)                │
-│ - Transaction Analytics: Income, expenses, cashflow trends         │
-│ - GST Analytics: Turnover, tax compliance, filing status          │
-│ - Credit Analytics: Existing debt, DTI ratio, repayment history   │
-│ - Anomaly Detection: Unusual spikes, fraud indicators             │
-└─────────────────────────────────────────────────────────────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│ STEP 5: Calculate Custom Credit Score (Automatic)                  │
-│ - Cashflow Stability Score (0-100)                                │
-│ - Business Health Score (0-100)                                   │
-│ - Debt Capacity Score (0-100)                                     │
-│ - Overall Risk Score (0-100)                                      │
-└─────────────────────────────────────────────────────────────────────┘
-                               ↓
-┌─────────────────────────────────────────────────────────────────────┐
-│ STEP 6: Loan Decision (Review & Decide)                           │
-│ - Review all analytics and scores                                 │
-│ - Check for red flags (anomalies, poor compliance, high debt)    │
-│ - Make decision: APPROVE or REJECT                                │
-│ - If approved: Set loan amount, tenure, interest rate             │
-└─────────────────────────────────────────────────────────────────────┘
-```
+### Generate Data for Multiple Customers
 
----
+**Option 1: Via Pipeline Monitor UI (Recommended)**
+1. Open `http://localhost:3000` → go to **Pipeline Monitor** tab
+2. Click **"Generate Random Customer ID"** button (green section at top)
+3. A new random customer ID will be assigned (e.g., `CUST_MSM_47832`)
+4. Click pipeline steps in order to generate data for that customer:
+   - Step 1: Validate Consent & Fetch Data
+   - Step 2: Clean & Validate Data
+   - Step 3: Generate Analytics & Insights
+   - Step 4: Calculate Credit Score
+5. **Debug panel** shows real-time execution status and current command being run
+6. Repeat to add more customers to your data pool
 
-## 🔒 Data Privacy & DPDP Compliance
-
-### Per-Customer Enforcement
-
-All APIs require `customer_id`:
-
+**Option 2: Via Command Line**
 ```bash
-# ❌ REJECTED: Bulk data request
-GET /api/data/transactions?type=raw
+# Customer 1
+python generate_all.py --customer-id CUST_MSM_00001
+python pipeline/clean_data.py --customer-id CUST_MSM_00001
+python analytics/generate_summaries.py --customer-id CUST_MSM_00001
 
-# ✅ ALLOWED: Per-customer request
-GET /api/data/transactions?customer_id=CUST_MSM_00001&type=raw
+# Customer 2 (will have different random seed → unique data)
+python generate_all.py --customer-id CUST_MSM_00002
+python pipeline/clean_data.py --customer-id CUST_MSM_00002
+python analytics/generate_summaries.py --customer-id CUST_MSM_00002
 ```
 
-### Data Retention Policy
-- **Active Consent**: Data accessible for lending decision
-- **Loan Approved**: Retain 90 days (regulatory)
-- **Loan Rejected**: Delete within 30 days
-- **Consent Revoked**: Delete within 24 hours
+**Important**: Each `customer_id` is hashed to seed the random number generator, ensuring reproducible yet distinct data per customer. You **must run the full pipeline** (generate → clean → analytics) for each new customer to get unique raw data.
+
+### Run Full Pipeline via UI
+1. Open `http://localhost:3000`
+2. Go to **Pipeline Monitor** tab
+3. Enter customer ID (required)
+4. Click pipeline steps in order:
+   - Step 1: Generate Data
+   - Step 2: Clean Data
+   - Step 3: Generate Analytics
+   - Step 4: Calculate Credit Score
+
+### Debug Data Issues
+- Use **Show Debug** button in GST & Business Insights section to inspect raw data structure
+- Check `logs/` directory for validation errors and cleaning logs
+- Inspect `raw/` vs `clean/` NDJSON files in Dataset Viewer tab
 
 ---
 
-## 📊 Analytics Generated (Per Customer)
+## 🧪 Testing & Verification
 
-### Transaction Analytics
-- Monthly income/expenses
-- Cashflow trends
-- Spending patterns by category
-- Top merchants
-- Payment mode distribution
-
-### GST Analytics
-- Business turnover (monthly/annual)
-- Tax compliance rate
-- Filing status (on-time/late)
-- Revenue growth trends
-
-### Credit Analytics
-- Bureau score
-- Existing debt obligations
-- Debt service ratio (DTI)
-- Repayment history
-- Account age & mix
-
-### Anomaly Detection
-- High-value transactions
-- Spending spikes
-- Income irregularities
-- Fraud indicators
-
-### Custom Risk Scores
-- **Cashflow Stability Score** (0-100)
-- **Business Health Score** (0-100)
-- **Debt Capacity Score** (0-100)
-- **Overall Credit Risk Score** (0-100)
-
-See [CUSTOMER_LENDING_FLOW.md](docs/CUSTOMER_LENDING_FLOW.md) for detailed scoring methodology.
-
----
-
-## 🔍 API Endpoints
-
-### Pipeline Control (Per Customer)
+### Test Credit Score Calculation
 ```bash
-POST /api/pipeline/generate
-{
-  "customer_id": "CUST_MSM_00001"
-}
-
-POST /api/pipeline/clean
-{
-  "customer_id": "CUST_MSM_00001"
-}
-
-POST /api/pipeline/analytics
-{
-  "customer_id": "CUST_MSM_00001"
-}
+curl -X POST http://localhost:5000/api/pipeline/calculate_score \
+  -H "Content-Type: application/json" \
+  -d '{"customer_id":"CUST_MSM_00001"}'
 ```
 
-### Data Access (Per Customer)
+### Test Analytics Endpoint
 ```bash
-GET /api/data/transactions?customer_id=CUST_MSM_00001&type=raw&limit=100
-GET /api/data/gst?customer_id=CUST_MSM_00001&type=clean
+curl "http://localhost:5000/api/analytics?customer_id=CUST_MSM_00001"
 ```
 
-### Analytics Retrieval
+### Test AI Insights
 ```bash
-GET /api/analytics?customer_id=CUST_MSM_00001
-```
-
-### System Stats
-```bash
-GET /api/stats  # Dataset counts (anonymized)
-
----
-
-## 📁 Project Structure
-
-```
-data_lake/
-├── config.json                      # Data generation configuration
-├── requirements.txt                 # Python dependencies
-├── generate_all.py                  # Master data generator (per-customer)
-│
-├── generators/                      # Data generation modules
-│   ├── indian_data_utils.py        # Utility functions
-│   ├── generate_banking_data.py    # Bank accounts + transactions
-│   ├── generate_additional_data.py # GST + Credit bureau
-│   ├── generate_insurance_mf.py    # Insurance + Mutual funds
-│   └── generate_ondc_ocen.py       # ONDC + OCEN
-│
-├── pipeline/                        # Data processing
-│   └── clean_data.py               # Cleaning & standardization (per-customer)
-│
-├── analytics/                       # Analytics generation
-│   └── generate_summaries.py       # Summaries & insights (per-customer)
-│
-├── schemas/                         # JSON Schema definitions
-│   ├── consent_schema.json
-│   ├── account_schema.json
-│   ├── transaction_schema.json
-│   ├── gst_schema.json
-│   ├── credit_report_schema.json
-│   ├── insurance_schema.json
-│   ├── mutual_fund_schema.json
-│   ├── ondc_schema.json
-│   └── ocen_schema.json
-│
-├── raw/                            # Raw data (per-customer, temporary)
-│   └── raw_*.ndjson               # Auto-deleted after processing
-│
-├── clean/                          # Cleaned data (per-customer)
-│   └── *_clean.ndjson
-│
-├── logs/                           # Validation & transformation logs
-│   └── *_log.json
-│
-├── analytics/                      # Analytics outputs (per-customer)
-│   ├── transaction_summary.json
-│   ├── gst_summary.json
-│   ├── credit_summary.json
-│   └── anomalies_report.json
-│
-├── api_panel/                      # Flask backend
-│   ├── app.py                     # API server + WebSocket
-│   └── templates/
-│       └── index.html
-│
-├── frontend/                       # React UI
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Dashboard.js
-│   │   │   ├── PipelineMonitor.js  # Customer ID input + pipeline control
-│   │   │   ├── DatasetViewer.js    # Per-customer data viewer
-│   │   │   ├── AnalyticsInsights.js # Charts & insights
-│   │   │   ├── LogsViewer.js
-│   │   │   └── FileManager.js
-│   │   └── App.js
-│   ├── package.json
-│   └── tailwind.config.js
-│
-└── docs/                           # Documentation
-    ├── CUSTOMER_LENDING_FLOW.md   # Complete lending journey
-    ├── data_dictionary.md          # Field definitions
-    └── TESTING_GUIDE.md           # Testing instructions
+curl -X POST http://localhost:5000/api/ai-insights \
+  -H "Content-Type: application/json" \
+  -d '{"customer_id":"CUST_MSM_00001"}'
 ```
 
 ---
 
-## 🎯 Use Cases
+## 📂 Project Structure
 
-### 1. MSME Lending (Primary)
-- Fetch AA data + GST + Bureau for loan applicant
-- Generate cashflow analytics
-- Calculate custom risk scores
-- Make approve/reject decision
-
-### 2. Credit Underwriting Training
-- Train underwriters on real-world data patterns
-- Demonstrate messy data challenges
-- Practice data quality assessment
-
-### 3. ML Model Development
-- Train income detection models
-- Build category prediction models
-- Develop fraud detection algorithms
-
-### 4. Fintech Product Testing
-- Test AA integration workflows
-- Validate data transformation pipelines
-- Benchmark analytics accuracy
-
----
-
-## 🧪 Sample Data
-
-### Transaction (Raw - Messy)
-```json
-{
-  "transaction_id": "TXN000000001",
-  "account_id": "ACC00000001",
-  "date": "4 Nov 25",
-  "amount": "1,250.00 Dr",
-  "narration": "UPI/Amazon/amazonpay@ybl",
-  "balance": "₹ 45,320.50"
-}
 ```
-
-### Transaction (Clean - Standardized)
-```json
-{
-  "transaction_id": "TXN000000001",
-  "account_id": "ACC00000001",
-  "date": "2025-11-04",
-  "type": "DEBIT",
-  "amount": 1250.0,
-  "mode": "UPI",
-  "merchant_name": "Amazon",
-  "category": "SHOPPING",
-  "balance_after": 45320.5,
-  "currency": "INR"
-}
+MSMELending/
+├── data_lake/
+│   ├── generators/              # Synthetic data generators
+│   │   ├── generate_banking_data.py
+│   │   ├── generate_additional_data.py  (GST, Credit Bureau)
+│   │   ├── generate_insurance_mf.py
+│   │   ├── generate_ondc_ocen.py
+│   │   └── indian_data_utils.py
+│   ├── pipeline/
+│   │   └── clean_data.py        # Data cleaning & validation
+│   ├── analytics/
+│   │   └── generate_summaries.py  # Analytics engine
+│   ├── api_panel/
+│   │   └── app.py               # Flask API + SocketIO
+│   ├── frontend/
+│   │   └── src/
+│   │       ├── components/
+│   │       │   ├── AnalyticsInsights.js  (main dashboard)
+│   │       │   ├── CreditMethodology.js  (explainability doc)
+│   │       │   ├── CreditCalculations.js (numeric examples)
+│   │       │   ├── PipelineMonitor.js
+│   │       │   ├── DatasetViewer.js
+│   │       │   └── Sidebar.js
+│   │       └── App.js
+│   ├── schemas/                 # JSON schemas for validation
+│   ├── docs/                    # Documentation
+│   ├── raw/                     # Raw NDJSON data (gitignored)
+│   ├── clean/                   # Cleaned NDJSON data (gitignored)
+│   ├── analytics/               # Analytics JSON summaries (gitignored)
+│   ├── logs/                    # Validation error logs (gitignored)
+│   ├── config.json              # Generation config
+│   ├── generate_all.py          # Master generator orchestrator
+│   ├── requirements.txt
+│   └── README.md
+└── README.md                    # This file
 ```
 
 ---
 
-## 📈 Performance
+## 🔧 Configuration
 
-### Generation Time (Per Customer)
-- Data fetch simulation: 30-60 seconds
-- Data cleaning: 10-20 seconds
-- Analytics generation: 5-10 seconds
-- **Total**: ~2 minutes per customer
-
-### Scalability
-- Single customer: 2 minutes
-- 100 customers (parallel): ~15 minutes
-- 1000 customers: ~2.5 hours
-
----
-
-## 🛠️ Configuration
-
-Edit `config.json` to customize:
-
+### Scale Settings (`data_lake/config.json`)
 ```json
 {
   "scale": {
-    "users": 1000,              // Per test run (can simulate multiple customers)
-    "bank_accounts": 1500,
+    "users": 10000,
+    "bank_accounts": 15000,
     "transactions": 50000
-  },
-  "date_range": {
-    "start": "2024-01-01",
-    "end": "2025-12-11"
   },
   "messiness_config": {
     "date_format_variation": true,
@@ -479,85 +390,77 @@ Edit `config.json` to customize:
 }
 ```
 
+### AI Provider Keys (`data_lake/.env`)
+```bash
+DEEPSEEK_API_KEY=sk-553a2062a03e4a88aec97575bd25d268
+GEMINI_API_KEY=your_gemini_key_here
+MAX_AI_PROMPT_TOKENS=1500
+MAX_AI_RESPONSE_TOKENS=1500
+```
+
 ---
 
-## 🔒 Security & Compliance
+## 🚧 Known Limitations & Future Enhancements
 
-### DPDP Act 2023 Compliance
-- ✅ Per-customer data isolation
-- ✅ Consent-based access
-- ✅ Data minimization
-- ✅ Automatic deletion post-processing
-- ✅ Audit trail for all access
+### Current Limitations
+1. **Anomaly detection** is rule-based (1st-pass logic) — not ML-based
+2. **GST/OCEN/MF/Insurance** analyzers have partial `calculation` metadata parity (transactions/credit/ONDC fully implemented)
+3. **AI insights** subject to provider token limits (may truncate context for large datasets)
+4. **Synthetic data only** — not connected to real AA/FIP providers
 
-### RBI AA Framework
-- ✅ Consent artefact validation
-- ✅ FIP-to-FIU data flow simulation
-- ✅ Encrypted data transfer (simulated)
-- ✅ Granular consent types
+### Planned Enhancements
+- ML-based anomaly detection (isolation forest, autoencoders)
+- Richer calculation metadata across all analyzers
+- Real AA integration (replace synthetic generators)
+- Time-series forecasting for cashflow prediction
+- Interactive risk matrix charts
+- Multi-language support (Hindi, regional languages)
 
 ---
 
 ## 📚 Documentation
 
-- **[CUSTOMER_LENDING_FLOW.md](docs/CUSTOMER_LENDING_FLOW.md)** - Complete lending journey (MUST READ)
-- **[data_dictionary.md](docs/data_dictionary.md)** - Field definitions & business rules
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - Testing instructions
-- OCEN: 1-2 min
-
-**Total**: ~60-90 minutes for full dataset
-
-### Memory Usage
-- Peak: ~3-4 GB RAM
-- Disk: ~8-12 GB (depending on transaction count)
-
----
-
-## 🔒 Data Privacy
-
-**All data is 100% synthetic.**
-- No real individuals
-- No real account numbers
-- No real PANs or GSTINs
-- Fictional names, addresses, and phone numbers
-
-Safe for testing, demos, and development.
-
----
-
-## 📚 References
-
-- [Account Aggregator Framework - RBI](https://www.rbi.org.in/)
-- [ONDC - Open Network for Digital Commerce](https://ondc.org/)
-- [OCEN - Open Credit Enablement Network](https://ocen.dev/)
-- [GST API Documentation](https://www.gst.gov.in/)
-- [Beckn Protocol Specification](https://beckn.org/)
+- **[data_lake/README.md](data_lake/README.md)** — detailed project documentation
+- **[data_lake/docs/CUSTOMER_LENDING_FLOW.md](data_lake/docs/CUSTOMER_LENDING_FLOW.md)** — lending journey walkthrough
+- **[data_lake/docs/data_dictionary.md](data_lake/docs/data_dictionary.md)** — field-level data documentation
+- **[data_lake/FLOW.md](data_lake/FLOW.md)** — pipeline execution flow diagram
 
 ---
 
 ## 🤝 Contributing
 
-This is a demonstration project. Feel free to:
-- Add more FIP data sources
-- Enhance messiness patterns
-- Improve cleaning algorithms
-- Add visualization dashboards
+This is a demo/prototype project. For production use:
+1. Replace synthetic data generators with real AA connectors
+2. Implement proper authentication & authorization
+3. Add audit trails and compliance logging
+4. Deploy backend/frontend with HTTPS
+5. Set up database for persistent storage (currently file-based)
+6. Add comprehensive test coverage
 
 ---
 
 ## 📄 License
 
-MIT License - Free to use for educational and commercial purposes.
+MIT License — Free to use for educational and commercial purposes.
 
 ---
 
-## 📧 Support
+## 🙏 Acknowledgments
 
-For questions or issues, please check:
-1. `docs/data_dictionary.md` for field definitions
-2. `logs/` directory for error details
-3. API panel at http://localhost:5000 for data exploration
+Built with adherence to:
+- **RBI Account Aggregator Framework** (Master Directions)
+- **Digital Personal Data Protection Act (DPDP) 2023**
+- **GSTN API** specifications
+- **ONDC Beckn Protocol** standards
+- **OCEN lending protocol**
 
 ---
 
-**Generated with ❤️ for the Indian BFSI ecosystem**
+## 📧 Contact
+
+- **GitHub**: [krishnaheda14/MSMELending](https://github.com/krishnaheda14/MSMELending)
+- **Issues**: Open an issue on GitHub for bugs or feature requests
+
+---
+
+**Built for the future of MSME lending in India. 🚀**

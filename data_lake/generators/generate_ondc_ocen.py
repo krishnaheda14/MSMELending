@@ -405,7 +405,11 @@ def save_ndjson(data: List[Dict], filepath: str):
 
 
 def main():
-    """Generate ONDC and OCEN data."""
+    """Generate ONDC and OCEN data."""    # Seed random with customer_id if provided (for distinct per-customer data)
+    customer_id = os.environ.get('CUSTOMER_ID', 'CUST_MSM_00001')
+    seed_value = hash(customer_id) % (2**32)
+    random.seed(seed_value)
+    print(f"  [SEED] Using seed {seed_value} from customer_id={customer_id}")
     # Load config
     with open('config.json', 'r') as f:
         config = json.load(f)

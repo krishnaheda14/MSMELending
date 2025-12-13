@@ -4,7 +4,9 @@ import ReactJson from 'react-json-view';
 import { Eye, Download } from 'lucide-react';
 
 const DatasetViewer = () => {
-  const [customerId, setCustomerId] = useState('CUST_MSM_00001');
+  const [customerId, setCustomerId] = useState(() => {
+    try { return localStorage.getItem('msme_customer_id') || 'CUST_MSM_00001'; } catch (e) { return 'CUST_MSM_00001'; }
+  });
   const [selectedDataset, setSelectedDataset] = useState('transactions');
   const [dataType, setDataType] = useState('raw');
   const [limit, setLimit] = useState(10);
@@ -63,7 +65,7 @@ const DatasetViewer = () => {
             <input
               type="text"
               value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
+              onChange={(e) => { setCustomerId(e.target.value); try { localStorage.setItem('msme_customer_id', e.target.value); } catch (err) {} }}
               placeholder="e.g., CUST_MSM_00001"
               className="w-full px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono"
             />

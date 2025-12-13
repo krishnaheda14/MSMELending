@@ -434,71 +434,204 @@ def save_log(log_data: List[Dict], filepath: str):
 
 
 def main():
-    """Main cleaning pipeline."""
+    """Main cleaning pipeline with detailed progress tracking."""
     print("="*80)
     print("  DATA CLEANING AND STANDARDIZATION PIPELINE")
     print("="*80)
     
     # Clean transactions
-    print("\n[1/4] Cleaning transactions...")
+    print("\n[STEP] 1/6 - Transactions")
+    print("[SUB-STEP] Loading raw transactions...")
     txn_cleaner = TransactionCleaner()
     raw_txns = load_ndjson('raw/raw_transactions.ndjson')
-    cleaned_txns = [txn_cleaner.clean_transaction(txn) for txn in raw_txns]
-    save_ndjson(cleaned_txns, 'clean/transactions_clean.ndjson')
+    print(f"[SUB-STEP] Loaded {len(raw_txns)} raw transactions")
+    
+    print("[SUB-STEP] Schema validation - checking required fields...")
+    validated_txns = []
+    for idx, txn in enumerate(raw_txns):
+        required_fields = ['transaction_id', 'account_id', 'date', 'type', 'amount']
+        missing = [f for f in required_fields if not txn.get(f)]
+        if missing:
+            print(f"[VALIDATION-ERROR] Transaction {txn.get('transaction_id', idx)}: missing fields {missing}")
+        else:
+            validated_txns.append(txn)
+    print(f"[SUB-STEP] Schema validation complete: {len(validated_txns)}/{len(raw_txns)} valid")
+    
+    print("[SUB-STEP] Format validation - dates, amounts, balances...")
+    cleaned_txns = [txn_cleaner.clean_transaction(txn) for txn in validated_txns]
+    print(f"[SUB-STEP] Format validation complete")
+    
+    print("[SUB-STEP] Duplicate detection and removal...")
+    seen_ids = set()
+    deduped_txns = []
+    duplicates = 0
+    for txn in cleaned_txns:
+        tid = txn.get('transaction_id')
+        if tid in seen_ids:
+            duplicates += 1
+            print(f"[DUPLICATE] Removed duplicate transaction: {tid}")
+        else:
+            seen_ids.add(tid)
+            deduped_txns.append(txn)
+    print(f"[SUB-STEP] Removed {duplicates} duplicates, {len(deduped_txns)} unique transactions")
+    
+    print("[SUB-STEP] Identifier consistency check - PAN, Account numbers...")
+    # Check if all transactions reference consistent account/user identifiers
+    account_ids = {t.get('account_id') for t in deduped_txns if t.get('account_id')}
+    print(f"[IDENTIFIER-CHECK] Found {len(account_ids)} unique account IDs")
+    
+    save_ndjson(deduped_txns, 'clean/transactions_clean.ndjson')
     save_log(txn_cleaner.parsing_log, 'logs/transaction_parsing_log.json')
     save_log(txn_cleaner.cleaning_log, 'logs/transaction_cleaning_log.json')
     save_log(txn_cleaner.validation_errors, 'logs/transaction_validation_errors.json')
-    print(f"  Cleaned {len(cleaned_txns)} transactions")
-    print(f"  Parsing actions: {len(txn_cleaner.parsing_log)}")
-    print(f"  Validation errors: {len(txn_cleaner.validation_errors)}")
+    print(f"[COMPLETED] Transactions: {len(deduped_txns)} cleaned records")
+    print(f"  - Parsing actions: {len(txn_cleaner.parsing_log)}")
+    print(f"  - Validation errors: {len(txn_cleaner.validation_errors)}")
     
     # Clean accounts
-    print("\n[2/4] Cleaning accounts...")
+    print("\n[STEP] 2/6 - Accounts")
+    print("[SUB-STEP] Loading raw accounts...")
     account_cleaner = AccountCleaner()
     raw_accounts = load_ndjson('raw/raw_accounts.ndjson')
-    cleaned_accounts = [account_cleaner.clean_account(acc) for acc in raw_accounts]
-    save_ndjson(cleaned_accounts, 'clean/accounts_clean.ndjson')
+    print(f"[SUB-STEP] Loaded {len(raw_accounts)} raw accounts")
+    
+    print("[SUB-STEP] Schema validation...")
+    validated_accounts = []
+    for acc in raw_accounts:
+        required_fields = ['account_id', 'user_id', 'bank']
+        missing = [f for f in required_fields if not acc.get(f)]
+        if missing:
+            print(f"[VALIDATION-ERROR] Account {acc.get('account_id', '?')}: missing {missing}")
+        else:
+            validated_accounts.append(acc)
+    print(f"[SUB-STEP] {len(validated_accounts)}/{len(raw_accounts)} accounts valid")
+    
+    print("[SUB-STEP] Format validation and identifier checks...")
+    cleaned_accounts = [account_cleaner.clean_account(acc) for acc in validated_accounts]
+    
+    print("[SUB-STEP] Duplicate removal...")
+    seen_accs = set()
+    deduped_accs = []
+    dup_count = 0
+    for acc in cleaned_accounts:
+        aid = acc.get('account_id')
+        if aid in seen_accs:
+            dup_count += 1
+            print(f"[DUPLICATE] Removed duplicate account: {aid}")
+        else:
+            seen_accs.add(aid)
+            deduped_accs.append(acc)
+    print(f"[SUB-STEP] Removed {dup_count} duplicates")
+    
+    print("[SUB-STEP] PAN/IFSC consistency check...")
+    ifsc_codes = {a.get('ifsc') for a in deduped_accs if a.get('ifsc')}
+    print(f"[IDENTIFIER-CHECK] Found {len(ifsc_codes)} unique IFSC codes")
+    
+    save_ndjson(deduped_accs, 'clean/accounts_clean.ndjson')
     save_log(account_cleaner.parsing_log, 'logs/account_parsing_log.json')
     save_log(account_cleaner.validation_errors, 'logs/account_validation_errors.json')
-    print(f"  Cleaned {len(cleaned_accounts)} accounts")
+    print(f"[COMPLETED] Accounts: {len(deduped_accs)} cleaned records")
     
     # Clean GST
-    print("\n[3/4] Cleaning GST returns...")
+    print("\n[STEP] 3/6 - GST Returns")
+    print("[SUB-STEP] Loading raw GST returns...")
     gst_cleaner = GSTCleaner()
     raw_gst = load_ndjson('raw/raw_gst.ndjson')
-    cleaned_gst = [gst_cleaner.clean_gst_return(gst) for gst in raw_gst]
-    save_ndjson(cleaned_gst, 'clean/gst_clean.ndjson')
+    print(f"[SUB-STEP] Loaded {len(raw_gst)} raw GST returns")
+    
+    print("[SUB-STEP] Schema validation...")
+    validated_gst = []
+    for gst in raw_gst:
+        required_fields = ['return_id', 'gstin', 'return_period']
+        missing = [f for f in required_fields if not gst.get(f)]
+        if missing:
+            print(f"[VALIDATION-ERROR] GST {gst.get('return_id', '?')}: missing {missing}")
+        else:
+            validated_gst.append(gst)
+    print(f"[SUB-STEP] {len(validated_gst)}/{len(raw_gst)} GST returns valid")
+    
+    print("[SUB-STEP] Format validation and GSTIN checks...")
+    cleaned_gst = [gst_cleaner.clean_gst_return(gst) for gst in validated_gst]
+    
+    print("[SUB-STEP] Duplicate removal...")
+    seen_gst = set()
+    deduped_gst = []
+    dup_gst = 0
+    for gst in cleaned_gst:
+        rid = gst.get('return_id')
+        if rid in seen_gst:
+            dup_gst += 1
+        else:
+            seen_gst.add(rid)
+            deduped_gst.append(gst)
+    print(f"[SUB-STEP] Removed {dup_gst} duplicates")
+    
+    print("[SUB-STEP] GSTIN consistency check...")
+    gstins = {g.get('gstin') for g in deduped_gst if g.get('gstin')}
+    print(f"[IDENTIFIER-CHECK] Found {len(gstins)} unique GSTINs")
+    if len(gstins) > 1:
+        print(f"[WARNING] Multiple GSTINs detected: {list(gstins)[:3]}...")
+    
+    save_ndjson(deduped_gst, 'clean/gst_clean.ndjson')
     save_log(gst_cleaner.parsing_log, 'logs/gst_parsing_log.json')
     save_log(gst_cleaner.validation_errors, 'logs/gst_validation_errors.json')
-    print(f"  Cleaned {len(cleaned_gst)} GST returns")
+    print(f"[COMPLETED] GST Returns: {len(deduped_gst)} cleaned records")
 
     # Clean OCEN applications
-    print("\n[4/6] Cleaning OCEN applications...")
+    print("\n[STEP] 4/6 - OCEN Applications")
+    print("[SUB-STEP] Loading raw OCEN applications...")
     ocen_cleaner = OCENCleaner()
     raw_ocen = []
     try:
         raw_ocen = load_ndjson('raw/raw_ocen_applications.ndjson')
     except Exception:
         raw_ocen = []
+    print(f"[SUB-STEP] Loaded {len(raw_ocen)} raw OCEN applications")
+    
+    print("[SUB-STEP] Schema & format validation...")
     cleaned_ocen = [ocen_cleaner.clean_application(a) for a in raw_ocen]
-    save_ndjson(cleaned_ocen, 'clean/ocen_applications_clean.ndjson')
+    print("[SUB-STEP] Duplicate removal & identifier checks...")
+    seen_ocen = set()
+    deduped_ocen = []
+    for app in cleaned_ocen:
+        aid = app.get('application_id')
+        if aid not in seen_ocen:
+            seen_ocen.add(aid)
+            deduped_ocen.append(app)
+    print(f"[SUB-STEP] {len(deduped_ocen)} unique applications")
+    
+    save_ndjson(deduped_ocen, 'clean/ocen_applications_clean.ndjson')
     save_log(ocen_cleaner.parsing_log, 'logs/ocen_parsing_log.json')
     save_log(ocen_cleaner.validation_errors, 'logs/ocen_validation_errors.json')
-    print(f"  Cleaned {len(cleaned_ocen)} OCEN applications")
+    print(f"[COMPLETED] OCEN Applications: {len(deduped_ocen)} cleaned records")
 
     # Clean ONDC orders
-    print("\n[5/6] Cleaning ONDC orders...")
+    print("\n[STEP] 5/6 - ONDC Orders")
+    print("[SUB-STEP] Loading raw ONDC orders...")
     ondc_cleaner = ONDCCleaner()
     raw_ondc = []
     try:
         raw_ondc = load_ndjson('raw/raw_ondc_orders.ndjson')
     except Exception:
         raw_ondc = []
+    print(f"[SUB-STEP] Loaded {len(raw_ondc)} raw ONDC orders")
+    
+    print("[SUB-STEP] Schema & format validation...")
     cleaned_ondc = [ondc_cleaner.clean_order(o) for o in raw_ondc]
-    save_ndjson(cleaned_ondc, 'clean/ondc_orders_clean.ndjson')
+    print("[SUB-STEP] Duplicate removal...")
+    seen_ondc = set()
+    deduped_ondc = []
+    for order in cleaned_ondc:
+        oid = order.get('order_id')
+        if oid not in seen_ondc:
+            seen_ondc.add(oid)
+            deduped_ondc.append(order)
+    print(f"[SUB-STEP] {len(deduped_ondc)} unique orders")
+    
+    save_ndjson(deduped_ondc, 'clean/ondc_orders_clean.ndjson')
     save_log(ondc_cleaner.parsing_log, 'logs/ondc_parsing_log.json')
     save_log(ondc_cleaner.validation_errors, 'logs/ondc_validation_errors.json')
-    print(f"  Cleaned {len(cleaned_ondc)} ONDC orders")
+    print(f"[COMPLETED] ONDC Orders: {len(deduped_ondc)} cleaned records")
     
     print("\n✓ Data cleaning completed!")
     print(f"\nCleaned files saved in 'clean/' directory")

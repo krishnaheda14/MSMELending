@@ -7,6 +7,8 @@ import DatasetViewer from './components/DatasetViewer';
 import LogsViewer from './components/LogsViewer';
 import FileManager from './components/FileManager';
 import AnalyticsInsights from './components/AnalyticsInsights';
+import EarningsVsSpendings from './components/EarningsVsSpendings';
+import FinancialSummary from './components/FinancialSummary';
 import CreditMethodology from './components/CreditMethodology';
 import CreditCalculations from './components/CreditCalculations';
 import Sidebar from './components/Sidebar';
@@ -48,6 +50,8 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/pipeline" element={<PipelineMonitor />} />
               <Route path="/analytics" element={<AnalyticsInsights />} />
+              <Route path="/financial-summary" element={<FinancialSummary />} />
+              <Route path="/detailed-metrics" element={<EarningsVsSpendings />} />
               <Route path="/methodology" element={<CreditMethodology />} />
               <Route path="/methodology/calculations" element={<CreditCalculations />} />
               <Route path="/api-console" element={<APIConsole />} />
