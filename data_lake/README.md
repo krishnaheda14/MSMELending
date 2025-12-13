@@ -175,7 +175,7 @@ cd F:\MSMELending\data_lake
 pip install -r requirements.txt
 
 # Create .env file with API keys
-echo "DEEPSEEK_API_KEY=sk-553a2062a03e4a88aec97575bd25d268" > .env
+echo "DEEPSEEK_API_KEY=sk-your deepseek key here" > .env
 echo "GEMINI_API_KEY=your_gemini_key_here" >> .env
 ```
 
