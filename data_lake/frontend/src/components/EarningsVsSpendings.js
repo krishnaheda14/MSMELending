@@ -137,12 +137,33 @@ const EarningsVsSpendings = () => {
             <div className="mb-4">
               <h4 className="font-semibold text-gray-700 mb-2">Calculation Breakdown:</h4>
               <div className="space-y-2">
-                {Object.entries(calcData.breakdown).map(([key, value]) => (
-                  <div key={key} className="flex justify-between bg-gray-50 p-3 rounded hover:bg-gray-100">
-                    <span className="text-gray-700 font-medium">{key}:</span>
-                    <span className="font-semibold text-gray-900">{typeof value === 'number' ? formatNumber(value) : value}</span>
-                  </div>
-                ))}
+                {Object.entries(calcData.breakdown).map(([key, value]) => {
+                  const renderValue = (v) => {
+                    if (v === null || v === undefined) return 'N/A';
+                    if (Array.isArray(v)) return v.join(', ');
+                    if (typeof v === 'object') {
+                      return (
+                        <div className="space-y-1 text-right">
+                          {Object.entries(v).map(([k, val]) => (
+                            <div key={k} className="text-sm">
+                              <span className="text-gray-500">{k}:</span>
+                              <span className="font-semibold text-gray-900 ml-2">{typeof val === 'number' ? formatNumber(val) : val}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    if (typeof v === 'number') return formatNumber(v);
+                    return v;
+                  };
+
+                  return (
+                    <div key={key} className="flex justify-between bg-gray-50 p-3 rounded hover:bg-gray-100">
+                      <span className="text-gray-700 font-medium">{key}:</span>
+                      <span className="font-semibold text-gray-900">{renderValue(value)}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -609,7 +630,12 @@ const EarningsVsSpendings = () => {
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className={`p-4 rounded-lg ${business_health?.credit_growth_rate >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
             <div className="flex justify-between items-center">
-              <h4 className="font-semibold text-gray-700">Credit Growth Rate</h4>
+              <div>
+                <h4 className="font-semibold text-gray-700">Credit Growth Rate</h4>
+                {business_health?.credit_growth_years >= 2 && business_health?.credit_growth_cagr != null && (
+                  <span className="text-xs text-gray-500">CAGR over {business_health.credit_growth_years} years</span>
+                )}
+              </div>
               <button
                 onClick={() => setShowCalculation({ metric: 'Credit Growth Rate', calculation: business_health?.calculation })}
                 className="text-blue-500 hover:text-blue-700"
@@ -630,7 +656,12 @@ const EarningsVsSpendings = () => {
           </div>
           <div className={`p-4 rounded-lg ${business_health?.expense_growth_rate <= 0 ? 'bg-green-50' : 'bg-orange-50'}`}>
             <div className="flex justify-between items-center">
-              <h4 className="font-semibold text-gray-700">Expense Growth Rate</h4>
+              <div>
+                <h4 className="font-semibold text-gray-700">Expense Growth Rate</h4>
+                {business_health?.expense_growth_years >= 2 && business_health?.expense_growth_cagr != null && (
+                  <span className="text-xs text-gray-500">CAGR over {business_health.expense_growth_years} years</span>
+                )}
+              </div>
               <button
                 onClick={() => setShowCalculation({ metric: 'Expense Growth Rate', calculation: business_health?.calculation })}
                 className="text-blue-500 hover:text-blue-700"
@@ -654,7 +685,7 @@ const EarningsVsSpendings = () => {
         {/* Top Customers */}
         {cashflow_metrics?.top_customers && cashflow_metrics.top_customers.length > 0 && (
           <div className="mt-6">
-            <h4 className="font-semibold text-gray-700 mb-3">Top 3 Customers by Inflow</h4>
+            <h4 className="font-semibold text-gray-700 mb-3">Top 5 Customers by Inflow</h4>
             <div className="space-y-2">
               {cashflow_metrics.top_customers.map((customer, idx) => (
                   <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded">

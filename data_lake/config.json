@@ -1,16 +1,13 @@
 {
   "scale": {
-
-    "users": 1000,                    
-    "bank_accounts": 1500,           
-    "transactions": 50000,          
-    "gst_profiles": 500,              
-    "credit_reports": 800,            
-    "insurance_policies": 1000,      
-    "mutual_fund_portfolios": 500,    
-    "ondc_orders": 2000,              
-    "ocen_applications": 300          
-  
+    "customers": 10,
+    "transactions_per_customer": 2000,
+    "gst_returns_per_customer": 48,
+    "credit_reports_per_customer": 1,
+    "insurance_policies_per_customer": 15,
+    "mutual_fund_portfolios_per_customer": 3,
+    "ondc_orders_per_customer": 800,
+    "ocen_applications_per_customer": 5
   },
   "date_range": {
     "start": "2022-01-01",

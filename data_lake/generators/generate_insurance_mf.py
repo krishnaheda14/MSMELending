@@ -370,20 +370,29 @@ def main():
     
     print("Generating insurance and mutual fund datasets...")
     
-    # Generate user IDs
-    user_ids = [f"USER{i:08d}" for i in range(1, config['scale']['users'] + 1)]
-    
+    # Determine per-customer counts (fallback to legacy keys)
+    num_policies = config.get('scale', {}).get('insurance_policies_per_customer', config.get('scale', {}).get('insurance_policies', 15))
+    num_portfolios = config.get('scale', {}).get('mutual_fund_portfolios_per_customer', config.get('scale', {}).get('mutual_fund_portfolios', 3))
+
+    # Use a per-customer user list (single synthetic user per customer to keep linkage simple)
+    user_ids = [f"USER_{customer_id}"]
+
     # Generate Insurance policies
     print("[1/2] Generating insurance policies...")
     insurance_gen = InsuranceGenerator(config)
-    policies = insurance_gen.generate(user_ids, config['scale']['insurance_policies'])
+    policies = insurance_gen.generate(user_ids, num_policies)
+    # Attach customer_id to policies
+    for p in policies:
+        p['customer_id'] = customer_id
     save_ndjson(policies, 'raw/raw_policies.ndjson')
     print(f"  Generated {len(policies)} insurance policies")
-    
+
     # Generate Mutual Fund portfolios
     print("[2/2] Generating mutual fund portfolios...")
     mf_gen = MutualFundGenerator(config)
-    portfolios = mf_gen.generate(user_ids, config['scale']['mutual_fund_portfolios'])
+    portfolios = mf_gen.generate(user_ids, num_portfolios)
+    for pf in portfolios:
+        pf['customer_id'] = customer_id
     save_ndjson(portfolios, 'raw/raw_mutual_funds.ndjson')
     print(f"  Generated {len(portfolios)} mutual fund portfolios")
     

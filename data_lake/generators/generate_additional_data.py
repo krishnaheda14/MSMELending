@@ -87,6 +87,43 @@ class GSTGenerator:
         elif month in [6, 7]:  # Mid-year
             monthly_turnover *= random.uniform(0.8, 0.95)
         
+        return self._generate_return_from_amount(return_id, gstin, trade_name, period_date, return_type, monthly_turnover)
+    
+    def _generate_return_from_amount(self, return_id: str, gstin: str, trade_name: str,
+                                    period_date: datetime, return_type: str, monthly_turnover: float) -> Dict:
+        """Generate a single GST return with specific turnover amount."""
+        return_period = period_date.strftime("%m-%Y")
+        
+        # Determine filing status
+        filing_status_weights = [0.70, 0.15, 0.10, 0.05]
+        status = random.choices(["FILED", "NOT_FILED", "LATE_FILED", "REVISED"],
+                               weights=filing_status_weights)[0]
+        
+        # Filing date
+        if status in ["FILED", "REVISED"]:
+            # Normal filing within 20 days of next month
+            filing_date = period_date + timedelta(days=random.randint(35, 50))
+        elif status == "LATE_FILED":
+            filing_date = period_date + timedelta(days=random.randint(60, 180))
+        else:
+            filing_date = None
+        
+        # Determine business size
+        business_type = random.choices(
+            ["micro", "small", "medium"],
+            weights=[0.50, 0.35, 0.15]
+        )[0]
+        
+        turnover_range = self.config['distributions']['gst_turnover'][business_type]
+        monthly_turnover = random.uniform(*turnover_range)
+        
+        # Add seasonality
+        month = period_date.month
+        if month in [10, 11, 12]:  # Festive season
+            monthly_turnover *= random.uniform(1.1, 1.4)
+        elif month in [6, 7]:  # Mid-year
+            monthly_turnover *= random.uniform(0.8, 0.95)
+        
         # Generate invoices
         num_invoices = max(1, int(monthly_turnover / random.uniform(10000, 50000)))
         num_invoices = min(num_invoices, 200)  # Cap for performance
@@ -464,22 +501,104 @@ def main():
     
     print("Generating additional datasets...")
     
-    # Generate user IDs
-    user_ids = [f"USER{i:08d}" for i in range(1, config['scale']['users'] + 1)]
+    # Generate GST data correlated with transactions
+    print("[1/3] Generating GST returns (correlated with transactions)...")
     
-    # Generate GST data
-    print("[1/3] Generating GST returns...")
+    # Load transactions for this customer to calculate GST turnover
+    txn_file = 'raw/raw_transactions.ndjson'
+    monthly_credits = {}
+    if os.path.exists(txn_file):
+        with open(txn_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    txn = json.loads(line)
+                except:
+                    continue
+
+                if txn.get('customer_id') != customer_id:
+                    continue
+
+                txn_type = str(txn.get('type', '')).upper()
+                if txn_type not in ['CREDIT', 'CR', 'C', 'DEPOSIT']:
+                    continue
+
+                # Robustly parse date (expecting string like YYYY-MM-DD)
+                raw_date = txn.get('date') or ''
+                if not isinstance(raw_date, str) or len(raw_date) < 7:
+                    continue
+                date = raw_date[:7]  # YYYY-MM
+
+                # Robustly parse amount
+                raw_amount = txn.get('amount')
+                try:
+                    if raw_amount in (None, ''):
+                        continue
+                    amount = float(str(raw_amount).replace(',', ''))
+                except:
+                    continue
+
+                monthly_credits[date] = monthly_credits.get(date, 0.0) + amount
+    
     gst_gen = GSTGenerator(config)
-    gst_returns = gst_gen.generate(config['scale']['gst_profiles'])
-    save_ndjson(gst_returns, 'raw/raw_gst.ndjson')
-    print(f"  Generated {len(gst_returns)} GST returns")
+    gst_returns = []
+    
+    # Generate GST returns based on actual transaction amounts
+    if monthly_credits:
+        gstin = generate_gstin()
+        trade_name = f"{random.choice(['M/s', 'Shri', ''])} {generate_indian_name()} {random.choice(['Traders', 'Enterprises', 'Industries', 'Services', 'Solutions', 'Pvt Ltd'])}"
+        
+        for month_str, turnover in monthly_credits.items():
+            try:
+                year, month = map(int, month_str.split('-'))
+                period_date = datetime(year, month, 1)
+                
+                # Generate GSTR1 and GSTR3B for each month
+                for return_type in ["GSTR1", "GSTR3B"]:
+                    gst_return = gst_gen._generate_return_from_amount(
+                        f"GSTR_{customer_id}_{month_str}_{return_type}",
+                        gstin,
+                        trade_name,
+                        period_date,
+                        return_type,
+                        turnover * 1.1  # Add 10% for unrecorded/cash sales
+                    )
+                    gst_return['customer_id'] = customer_id
+                    gst_returns.append(gst_return)
+            except:
+                pass
+    
+    # Load existing GST returns and filter/merge
+    gst_file = 'raw/raw_gst.ndjson'
+    if os.path.exists(gst_file):
+        with open(gst_file, 'r') as f:
+            existing = [json.loads(line) for line in f if line.strip()]
+        existing = [g for g in existing if g.get('customer_id') != customer_id]
+        gst_returns = existing + gst_returns
+    
+    save_ndjson(gst_returns, gst_file)
+    print(f"  Generated {len([g for g in gst_returns if g.get('customer_id') == customer_id])} GST returns for {customer_id}")
     
     # Generate Credit Bureau reports
     print("[2/3] Generating credit bureau reports...")
+    user_ids = [f"USER_{customer_id}"]
     bureau_gen = CreditBureauGenerator(config)
     reports = bureau_gen.generate(user_ids)
-    save_ndjson(reports, 'raw/raw_credit_reports.ndjson')
-    print(f"  Generated {len(reports)} credit reports")
+    
+    for report in reports:
+        report['customer_id'] = customer_id
+    
+    # Load existing reports and filter/merge
+    bureau_file = 'raw/raw_credit_reports.ndjson'
+    if os.path.exists(bureau_file):
+        with open(bureau_file, 'r') as f:
+            existing = [json.loads(line) for line in f if line.strip()]
+        existing = [r for r in existing if r.get('customer_id') != customer_id]
+        reports = existing + reports
+    
+    save_ndjson(reports, bureau_file)
+    print(f"  Generated {len([r for r in reports if r.get('customer_id') == customer_id])} credit reports for {customer_id}")
     
     print("\nAdditional data generation completed!")
 

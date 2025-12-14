@@ -416,20 +416,28 @@ def main():
     
     print("Generating ONDC and OCEN datasets...")
     
-    # Generate user IDs
-    user_ids = [f"USER{i:08d}" for i in range(1, config['scale']['users'] + 1)]
-    
+    # Per-customer counts with fallbacks
+    num_orders = config.get('scale', {}).get('ondc_orders_per_customer', config.get('scale', {}).get('ondc_orders', 0))
+    num_applications = config.get('scale', {}).get('ocen_applications_per_customer', config.get('scale', {}).get('ocen_applications', 0))
+
+    # Use single synthetic user per customer
+    user_ids = [f"USER_{customer_id}"]
+
     # Generate ONDC orders
     print("[1/2] Generating ONDC orders...")
     ondc_gen = ONDCGenerator(config)
-    orders = ondc_gen.generate(user_ids, config['scale']['ondc_orders'])
+    orders = ondc_gen.generate(user_ids, num_orders)
+    for o in orders:
+        o['customer_id'] = customer_id
     save_ndjson(orders, 'raw/raw_ondc_orders.ndjson')
     print(f"  Generated {len(orders)} ONDC orders")
-    
+
     # Generate OCEN applications
     print("[2/2] Generating OCEN loan applications...")
     ocen_gen = OCENGenerator(config)
-    applications = ocen_gen.generate(user_ids, config['scale']['ocen_applications'])
+    applications = ocen_gen.generate(user_ids, num_applications)
+    for a in applications:
+        a['customer_id'] = customer_id
     save_ndjson(applications, 'raw/raw_ocen_applications.ndjson')
     print(f"  Generated {len(applications)} OCEN loan applications")
     

@@ -88,10 +88,10 @@ const PipelineMonitor = () => {
           }
           if (raw_present) {
             setDataFetched(true);
-            // mark step 1 completed if raw present
+            // raw data presence implies consent & fetch (step 0) already completed
             setPipeline(prev => ({
               ...prev,
-              steps: prev.steps.map(s => s.id === 1 ? { ...s, status: 'completed', progress: 100 } : s)
+              steps: prev.steps.map(s => s.id === 0 ? { ...s, status: 'completed', progress: 100 } : s)
             }));
             setConsentGranted(true);
           }
@@ -385,7 +385,7 @@ const PipelineMonitor = () => {
             <div><span className="font-mono bg-blue-50 px-2 py-1 rounded">CUST_MSM_00001</span> - Baseline</div>
             <div><span className="font-mono bg-orange-50 px-2 py-1 rounded">CUST_MSM_00002</span> - High Seasonality</div>
             <div><span className="font-mono bg-red-50 px-2 py-1 rounded">CUST_MSM_00003</span> - High Debt</div>
-            <div><span className="font-mono bg-green-50 px-2 py-1 rounded">CUST_MSM_00004</span> - High Growth</div>
+            <div><span className="font-mono bg-green-50 px-2 py-1 rounded">CUST_MSM_00004</span> - High Growth (126% CAGR)</div>
             <div><span className="font-mono bg-green-50 px-2 py-1 rounded">CUST_MSM_00005</span> - Stable Income ⭐</div>
             <div><span className="font-mono bg-red-50 px-2 py-1 rounded">CUST_MSM_00006</span> - High Bounce Rate</div>
             <div><span className="font-mono bg-red-50 px-2 py-1 rounded">CUST_MSM_00007</span> - Declining</div>
@@ -502,7 +502,14 @@ const PipelineMonitor = () => {
           </button>
           <button
             onClick={() => startPipeline('analytics')}
-            disabled={pipeline.status === 'running' || !customerId || pipeline.steps[1].status !== 'completed' || pipeline.steps[2].status === 'completed'}
+            disabled={
+              pipeline.status === 'running' ||
+              !customerId ||
+              // enforce strict step-by-step: require step 0 and step 1 completed
+              pipeline.steps[0].status !== 'completed' ||
+              pipeline.steps[1].status !== 'completed' ||
+              pipeline.steps[2].status === 'completed'
+            }
             className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-lg font-semibold"
           >
             <Play className="w-5 h-5" />

@@ -81,18 +81,42 @@ def modify_transactions_for_high_debt(transactions):
     return transactions + new_transactions
 
 def modify_transactions_for_high_growth(transactions):
-    """Create strong growth trend."""
-    sorted_txns = sorted(transactions, key=lambda x: x.get('date', ''))
+    """Create strong growth trend: revenue increases over time (1x → 3x)."""
+    from dateutil import parser as date_parser
     
+    # Parse and sort by actual date
+    parsed_txns = []
+    for txn in transactions:
+        date_str = txn.get('date')
+        if not date_str:
+            parsed_date = datetime(2000, 1, 1)  # Default for missing dates
+        else:
+            try:
+                parsed_date = date_parser.parse(str(date_str), dayfirst=False)
+            except:
+                parsed_date = datetime(2000, 1, 1)
+        parsed_txns.append((parsed_date, txn))
+    
+    # Sort by parsed date
+    parsed_txns.sort(key=lambda x: x[0])
+    sorted_txns = [t[1] for t in parsed_txns]
+
     for i, txn in enumerate(sorted_txns):
         txn_type = str(txn.get('type', '')).upper()
         if txn_type in ['CREDIT', 'CR', 'C', 'DEPOSIT']:
-            growth_factor = 1.0 + (i / len(sorted_txns)) * 2.0  # 1x to 3x
+            # Create strong growth: shrink early amounts, amplify late amounts
+            # This creates growth trend regardless of original data pattern
             try:
-                txn['amount'] = float(str(txn['amount']).replace(',', '')) * growth_factor
-            except:
+                length = max(1, len(sorted_txns))
+                # Aggressive multiplier: 0.3x → 3.0x (10x growth ratio)
+                growth_factor = 0.3 + ((i / length) * 2.7)  # 0.3x early → 3.0x late
+                txn_amount = txn.get('amount')
+                if txn_amount in (None, ''):
+                    continue
+                txn['amount'] = float(str(txn_amount).replace(',', '')) * growth_factor
+            except Exception:
                 pass
-    
+
     return sorted_txns
 
 def modify_transactions_for_stable_income(transactions):
@@ -151,17 +175,38 @@ def modify_transactions_for_high_bounce(transactions):
 
 def modify_transactions_for_declining_business(transactions):
     """Create declining revenue trend."""
-    sorted_txns = sorted(transactions, key=lambda x: x.get('date', ''))
+    from dateutil import parser as date_parser
     
+    # Parse and sort by actual date
+    parsed_txns = []
+    for txn in transactions:
+        date_str = txn.get('date')
+        if not date_str:
+            parsed_date = datetime(2000, 1, 1)
+        else:
+            try:
+                parsed_date = date_parser.parse(str(date_str), dayfirst=False)
+            except:
+                parsed_date = datetime(2000, 1, 1)
+        parsed_txns.append((parsed_date, txn))
+    
+    # Sort by parsed date
+    parsed_txns.sort(key=lambda x: x[0])
+    sorted_txns = [t[1] for t in parsed_txns]
+
     for i, txn in enumerate(sorted_txns):
         txn_type = str(txn.get('type', '')).upper()
         if txn_type in ['CREDIT', 'CR', 'C', 'DEPOSIT']:
-            decline_factor = 1.5 - (i / len(sorted_txns)) * 1.3  # 1.5x to 0.2x
             try:
-                txn['amount'] = float(str(txn['amount']).replace(',', '')) * max(0.2, decline_factor)
-            except:
+                length = max(1, len(sorted_txns))
+                decline_factor = 1.5 - (i / length) * 1.3  # 1.5x to ~0.2x
+                txn_amount = txn.get('amount')
+                if txn_amount in (None, ''):
+                    continue
+                txn['amount'] = float(str(txn_amount).replace(',', '')) * max(0.2, decline_factor)
+            except Exception:
                 pass
-    
+
     return sorted_txns
 
 def modify_transactions_for_customer_concentration(transactions):
@@ -198,34 +243,47 @@ def apply_profile(customer_id, profile_type):
     print(f"  Applying {profile_type} profile to {customer_id}")
     print(f"{'='*80}")
     
-    txn_file = 'raw/raw_transactions.ndjson'
+    txn_file = 'raw/raw_transactions_with_customer_id.ndjson'
     if not os.path.exists(txn_file):
         print(f"  ❌ File not found: {txn_file}")
         return False
     
-    print(f"  Loading transactions...")
-    transactions = load_transactions(txn_file)
-    print(f"  Loaded {len(transactions)} transactions")
+    print(f"  Loading all transactions...")
+    all_transactions = load_transactions(txn_file)
     
-    # Apply modification
+    # CRITICAL FIX: Filter by customer_id
+    customer_transactions = [t for t in all_transactions if t.get('customer_id') == customer_id]
+    other_transactions = [t for t in all_transactions if t.get('customer_id') != customer_id]
+    
+    print(f"  Found {len(customer_transactions)} transactions for {customer_id}")
+    print(f"  Keeping {len(other_transactions)} transactions for other customers")
+    
+    if not customer_transactions:
+        print(f"  ⚠️  No transactions found for {customer_id}. Run generation first!")
+        return False
+    
+    # Apply modification ONLY to this customer's transactions
     if profile_type == 'high_seasonality':
-        transactions = modify_transactions_for_high_seasonality(transactions)
+        customer_transactions = modify_transactions_for_high_seasonality(customer_transactions)
     elif profile_type == 'high_debt':
-        transactions = modify_transactions_for_high_debt(transactions)
+        customer_transactions = modify_transactions_for_high_debt(customer_transactions)
     elif profile_type == 'high_growth':
-        transactions = modify_transactions_for_high_growth(transactions)
+        customer_transactions = modify_transactions_for_high_growth(customer_transactions)
     elif profile_type == 'stable_income':
-        transactions = modify_transactions_for_stable_income(transactions)
+        customer_transactions = modify_transactions_for_stable_income(customer_transactions)
     elif profile_type == 'high_bounce':
-        transactions = modify_transactions_for_high_bounce(transactions)
+        customer_transactions = modify_transactions_for_high_bounce(customer_transactions)
     elif profile_type == 'declining':
-        transactions = modify_transactions_for_declining_business(transactions)
+        customer_transactions = modify_transactions_for_declining_business(customer_transactions)
     elif profile_type == 'customer_concentration':
-        transactions = modify_transactions_for_customer_concentration(transactions)
+        customer_transactions = modify_transactions_for_customer_concentration(customer_transactions)
     
-    print(f"  Saving modified transactions...")
-    save_transactions(txn_file, transactions)
-    print(f"  ✅ Saved {len(transactions)} modified transactions")
+    # Merge back: keep other customers' data + modified customer data
+    all_transactions = other_transactions + customer_transactions
+    
+    print(f"  Saving all transactions ({len(all_transactions)} total)...")
+    save_transactions(txn_file, all_transactions)
+    print(f"  ✅ Saved {len(customer_transactions)} modified transactions for {customer_id}")
     
     return True
 

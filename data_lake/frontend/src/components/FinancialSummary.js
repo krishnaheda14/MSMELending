@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, BarChart3, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, PieChart, BarChart3, ArrowUpCircle, ArrowDownCircle, Info } from 'lucide-react';
 import { formatCurrency, formatPercent, formatNumber } from '../utils/formatters';
 
 const FinancialSummary = () => {
@@ -9,6 +9,7 @@ const FinancialSummary = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showCalculation, setShowCalculation] = useState(null);
 
   const fetchData = async () => {
     if (!customerId) return;
@@ -82,6 +83,84 @@ const FinancialSummary = () => {
 
   const { cashflow_metrics, business_health, credit_behavior, expense_composition } = data;
 
+  // Calculation Modal Component
+  const CalculationModal = ({ metric, onClose }) => {
+    if (!metric) return null;
+
+    const { title, calculation } = metric;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+        <div className="bg-white rounded-lg p-6 max-w-3xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+          </div>
+          
+          {calculation && (
+            <>
+              {calculation.formula && (
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-700 mb-2">Formula:</h4>
+                  <div className="bg-blue-50 p-3 rounded font-mono text-sm text-blue-900">{calculation.formula}</div>
+                </div>
+              )}
+              
+              {calculation.explanation && (
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-700 mb-2">Explanation:</h4>
+                  <p className="text-gray-600 leading-relaxed">{calculation.explanation}</p>
+                </div>
+              )}
+              
+              {calculation.breakdown && (
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-700 mb-2">Calculation Breakdown:</h4>
+                  <div className="space-y-2">
+                    {Object.entries(calculation.breakdown).map(([key, value]) => {
+                      const renderValue = (v) => {
+                        if (v === null || v === undefined) return 'N/A';
+                        if (Array.isArray(v)) return v.join(', ');
+                        if (typeof v === 'object') {
+                          return (
+                            <div className="space-y-1 text-right">
+                              {Object.entries(v).map(([k, val]) => (
+                                <div key={k} className="text-sm">
+                                  <span className="text-gray-500">{k}:</span>
+                                  <span className="font-semibold text-gray-900 ml-2">{typeof val === 'number' ? formatNumber(val) : val}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (typeof v === 'number') return formatNumber(v);
+                        return v;
+                      };
+
+                      return (
+                        <div key={key} className="flex justify-between bg-gray-50 p-3 rounded hover:bg-gray-100">
+                          <span className="text-gray-700 font-medium">{key}:</span>
+                          <span className="font-semibold text-gray-900">{renderValue(value)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          
+          <button
+            onClick={onClose}
+            className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Calculate key P&L metrics
   const totalRevenue = cashflow_metrics?.total_inflow || 0;
   const totalExpenses = cashflow_metrics?.total_outflow || 0;
@@ -107,7 +186,7 @@ const FinancialSummary = () => {
   const nonEssentialSpending = expense_composition?.non_essential_spend || 0;
   const debtServicing = expense_composition?.debt_servicing || 0;
 
-  const StatCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, color = 'blue' }) => {
+  const StatCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, color = 'blue', calculation }) => {
     const colorClasses = {
       blue: 'bg-blue-50 border-blue-200 text-blue-800',
       green: 'bg-green-50 border-green-200 text-green-800',
@@ -121,7 +200,18 @@ const FinancialSummary = () => {
       <div className={`border-2 rounded-lg p-4 ${colorClasses[color]}`}>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium opacity-75">{title}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium opacity-75">{title}</p>
+              {calculation && (
+                <button
+                  onClick={() => setShowCalculation({ title, calculation })}
+                  className="text-blue-500 hover:text-blue-700"
+                  title="Show calculation"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             <p className="text-2xl font-bold mt-1">{value}</p>
             {subtitle && <p className="text-sm opacity-75 mt-1">{subtitle}</p>}
           </div>
@@ -149,6 +239,14 @@ const FinancialSummary = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Calculation Modal */}
+      {showCalculation && (
+        <CalculationModal
+          metric={showCalculation}
+          onClose={() => setShowCalculation(null)}
+        />
+      )}
+
       {/* Customer Selection */}
       <div className="bg-white p-4 rounded-lg shadow-md">
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -201,6 +299,7 @@ const FinancialSummary = () => {
             color="green"
             trend={creditGrowth > 0 ? 'up' : 'down'}
             trendValue={`${formatPercent(Math.abs(creditGrowth))} growth`}
+            calculation={cashflow_metrics?.calculation?.inflow_outflow_ratio}
           />
           <StatCard
             title="Total Expenses (Outflow)"
@@ -209,7 +308,10 @@ const FinancialSummary = () => {
             icon={TrendingDown}
             color="orange"
             trend={expenseGrowth > 0 ? 'up' : 'down'}
-            trendValue={`${formatPercent(Math.abs(expenseGrowth))} growth`}
+            trendValue={business_health?.expense_growth_years >= 2 && business_health?.expense_growth_cagr != null
+              ? `${formatPercent(Math.abs(expenseGrowth))} CAGR (${business_health.expense_growth_years}Y)`
+              : `${formatPercent(Math.abs(expenseGrowth))} growth`}
+            calculation={cashflow_metrics?.calculation?.total_expenses}
           />
           <StatCard
             title="Net Profit (Surplus)"
@@ -217,6 +319,7 @@ const FinancialSummary = () => {
             subtitle={`${formatPercent(profitMargin)} margin`}
             icon={Activity}
             color={netProfit > 0 ? 'green' : 'red'}
+            calculation={cashflow_metrics?.calculation?.net_surplus}
           />
         </div>
       </div>
@@ -229,11 +332,14 @@ const FinancialSummary = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard
-            title="Revenue Growth (3-Month)"
+            title={business_health?.credit_growth_years >= 2 && business_health?.credit_growth_cagr != null 
+              ? `Revenue Growth (CAGR ${business_health.credit_growth_years}Y)` 
+              : "Revenue Growth (3-Month)"}
             value={formatPercent(creditGrowth)}
-            subtitle="Recent trend"
+            subtitle={business_health?.credit_growth_years >= 2 ? "Compound annual" : "Recent trend"}
             icon={TrendingUp}
             color={creditGrowth > 0 ? 'green' : 'red'}
+            calculation={business_health?.calculation?.credit_growth_rate}
           />
           <StatCard
             title="TTM Revenue Growth"
@@ -241,6 +347,7 @@ const FinancialSummary = () => {
             subtitle="Year-over-year"
             icon={TrendingUp}
             color={ttmGrowth > 0 ? 'green' : 'red'}
+            calculation={business_health?.calculation?.ttm_revenue_growth}
           />
           <StatCard
             title="QoQ Revenue Growth"
@@ -248,6 +355,7 @@ const FinancialSummary = () => {
             subtitle="Quarter momentum"
             icon={TrendingUp}
             color={qoqGrowth > 0 ? 'green' : 'red'}
+            calculation={business_health?.calculation?.qoq_revenue_growth}
           />
           <StatCard
             title="Profit Margin"
@@ -278,6 +386,7 @@ const FinancialSummary = () => {
             value={`${formatNumber(workingCapitalDays)} days`}
             subtitle={workingCapitalDays > 90 ? 'Excellent runway' : workingCapitalDays > 30 ? 'Good runway' : 'Tight cashflow'}
             color={workingCapitalDays > 90 ? 'green' : workingCapitalDays > 30 ? 'blue' : 'red'}
+            calculation={business_health?.calculation?.working_capital_gap}
           />
           <StatCard
             title="Surplus Ratio"

@@ -384,38 +384,84 @@ def main():
     with open('config.json', 'r') as f:
         config = json.load(f)
     
-    print("Starting data generation...")
-    print(f"Configuration: {config['scale']}")
+    # Use per-customer scales
+    scale = config['scale']
+    num_transactions = scale.get('transactions_per_customer', scale.get('transactions', 2000))
     
-    # Generate user IDs
+    print("Starting data generation...")
+    print(f"Customer: {customer_id}")
+    print(f"Configuration: transactions={num_transactions}")
+    
+    # Generate user IDs (just one user per customer for simplicity)
     print("\n[1/9] Generating user IDs...")
-    user_ids = [f"USER{i:08d}" for i in range(1, config['scale']['users'] + 1)]
+    user_ids = [f"USER_{customer_id}"]
     
     # Generate consents
     print("[2/9] Generating consent artefacts...")
     consent_gen = ConsentGenerator(config)
     consents = consent_gen.generate(user_ids)
-    save_ndjson(consents, 'raw/raw_consent.ndjson')
-    print(f"  Generated {len(consents)} consent artefacts")
     
-    # Generate accounts
+    # Add customer_id to each consent
+    for c in consents:
+        c['customer_id'] = customer_id
+    
+    # Load existing consents or create new file
+    consent_file = 'raw/raw_consent.ndjson'
+    if os.path.exists(consent_file):
+        with open(consent_file, 'r') as f:
+            existing = [json.loads(line) for line in f if line.strip()]
+        # Filter out this customer's old data
+        existing = [c for c in existing if c.get('customer_id') != customer_id]
+        consents = existing + consents
+    
+    save_ndjson(consents, consent_file)
+    print(f"  Generated {len([c for c in consents if c.get('customer_id') == customer_id])} consents for {customer_id}")
+    
+    # Generate accounts (2-3 per customer)
     print("[3/9] Generating bank accounts...")
     account_gen = BankAccountGenerator(config)
-    accounts = account_gen.generate(user_ids, config['scale']['bank_accounts'])
-    save_ndjson(accounts, 'raw/raw_accounts.ndjson')
-    print(f"  Generated {len(accounts)} bank accounts")
+    accounts = account_gen.generate(user_ids, random.randint(2, 3))
+    
+    # Add customer_id to each account
+    for acc in accounts:
+        acc['customer_id'] = customer_id
+    
+    # Load existing accounts or create new file
+    accounts_file = 'raw/raw_accounts.ndjson'
+    if os.path.exists(accounts_file):
+        with open(accounts_file, 'r') as f:
+            existing = [json.loads(line) for line in f if line.strip()]
+        # Filter out this customer's old data
+        existing = [a for a in existing if a.get('customer_id') != customer_id]
+        accounts = existing + accounts
+    
+    save_ndjson(accounts, accounts_file)
+    print(f"  Generated {len([a for a in accounts if a.get('customer_id') == customer_id])} accounts for {customer_id}")
+    
+    # Filter accounts for this customer only
+    customer_accounts = [a for a in accounts if a.get('customer_id') == customer_id]
     
     # Generate transactions
     print("[4/9] Generating transactions (this may take a while)...")
     txn_gen = TransactionGenerator(config)
     
-    # Generate in batches to manage memory
-    batch_size = config['output']['batch_size']
-    num_transactions = config['scale']['transactions']
+    all_transactions = txn_gen.generate(customer_accounts, num_transactions)
     
-    all_transactions = txn_gen.generate(accounts, num_transactions)
-    save_ndjson(all_transactions, 'raw/raw_transactions.ndjson')
-    print(f"  Generated {len(all_transactions)} transactions")
+    # Add customer_id to each transaction
+    for txn in all_transactions:
+        txn['customer_id'] = customer_id
+    
+    # Load existing transactions or create new file
+    txn_file = 'raw/raw_transactions.ndjson'
+    if os.path.exists(txn_file):
+        with open(txn_file, 'r') as f:
+            existing_txns = [json.loads(line) for line in f if line.strip()]
+        # Filter out this customer's old data
+        existing_txns = [t for t in existing_txns if t.get('customer_id') != customer_id]
+        all_transactions = existing_txns + all_transactions
+    
+    save_ndjson(all_transactions, txn_file)
+    print(f"  Generated {len([t for t in all_transactions if t.get('customer_id') == customer_id])} transactions for {customer_id}")
     
     print("\nRaw data generation completed!")
     print(f"Files saved in 'raw/' directory")

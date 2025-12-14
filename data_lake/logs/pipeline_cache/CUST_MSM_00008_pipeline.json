@@ -1,0 +1,119 @@
+{
+  "customer_id": "CUST_MSM_00008",
+  "logs": [
+    {
+      "timestamp": "2025-12-13T20:52:45.753977Z",
+      "level": "info",
+      "message": "Starting analytics generation pipeline..."
+    },
+    {
+      "timestamp": "2025-12-13T20:52:45.913857Z",
+      "level": "info",
+      "message": "Executing: python analytics/generate_summaries.py"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:46.401143Z",
+      "level": "info",
+      "message": "[INFO] Starting comprehensive analytics generation for customer=CUST_MSM_00008"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:46.431334Z",
+      "level": "info",
+      "message": "[INFO] Loading data from F:\\MSMELending\\data_lake\\raw..."
+    },
+    {
+      "timestamp": "2025-12-13T20:52:46.464630Z",
+      "level": "info",
+      "message": "[INFO] Using transactions file: F:\\MSMELending\\data_lake\\raw\\raw_transactions.ndjson"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:47.446913Z",
+      "level": "info",
+      "message": "[INFO] Using GST file: F:\\MSMELending\\data_lake\\raw\\raw_gst.ndjson"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:48.789320Z",
+      "level": "info",
+      "message": "[INFO] GST records loaded: 5000 (limit=5000, rate=0.0)"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:48.820687Z",
+      "level": "info",
+      "message": "[INFO] Generating analytics..."
+    },
+    {
+      "timestamp": "2025-12-13T20:52:48.853398Z",
+      "level": "info",
+      "message": "[INFO] Computing advanced financial metrics..."
+    },
+    {
+      "timestamp": "2025-12-13T20:52:48.884351Z",
+      "level": "info",
+      "message": "[ERROR] Analytics generation failed: name 'monthly_credits' is not defined"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:48.914175Z",
+      "level": "info",
+      "message": "Traceback (most recent call last):"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:48.949904Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\generate_summaries.py\", line 928, in <module>"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:48.986169Z",
+      "level": "info",
+      "message": "    main()"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:49.032418Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\generate_summaries.py\", line 656, in main"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:49.081518Z",
+      "level": "info",
+      "message": "    cashflow_metrics = compute_cashflow_metrics(transactions)"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:49.124892Z",
+      "level": "info",
+      "message": "                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:49.174152Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\financial_metrics.py\", line 16, in compute_cashflow_metrics"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:49.221886Z",
+      "level": "info",
+      "message": "    for month in set(list(monthly_credits.keys()) + list(monthly_debits.keys())):"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:49.274508Z",
+      "level": "info",
+      "message": "                          ^^^^^^^^^^^^^^^"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:49.311646Z",
+      "level": "info",
+      "message": "NameError: name 'monthly_credits' is not defined"
+    },
+    {
+      "timestamp": "2025-12-13T20:52:49.496725Z",
+      "level": "error",
+      "message": "Analytics failed with code 2"
+    }
+  ],
+  "steps": {
+    "3": {
+      "step": "analytics",
+      "progress": 0,
+      "status": "failed"
+    }
+  },
+  "pipelineStatus": "idle",
+  "last_updated": "2025-12-13T20:52:49.524839Z"
+}

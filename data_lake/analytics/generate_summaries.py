@@ -338,6 +338,9 @@ def analyze_insurance(policies, customer_id):
 
     active_policies = len([p for p in customer_policies if p.get('status') == 'ACTIVE'])
 
+    # Sanity check: extremely high policy counts are suspicious in demo data
+    suspicious_policy_count = True if len(customer_policies) > 200 else False
+
     return {
         "customer_id": customer_id,
         "generated_at": now_ts(),
@@ -346,10 +349,12 @@ def analyze_insurance(policies, customer_id):
         "annual_premium": total_premium,
         "by_type": dict(by_type),
         "active_policies": active_policies,
+        "suspicious_policy_count": suspicious_policy_count,
         "calculation": {
             "policies_counted": len(customer_policies),
             "total_coverage_sum": total_coverage,
-            "total_annual_premium": total_premium
+            "total_annual_premium": total_premium,
+            "note": "If total_policies is very large (>>100), the dataset may include synthetic or duplicated policies; inspect raw policy records."
         }
     }
 
@@ -542,6 +547,21 @@ def create_anomalies_with_transactions(transactions, customer_id):
 def main():
     parser = argparse.ArgumentParser(description="Generate comprehensive analytics summaries (per-customer)")
     parser.add_argument("--customer-id", dest="customer_id", required=True)
+    # Optional raw file paths (allow pointing to annotated versions)
+    parser.add_argument("--raw-transactions", dest="raw_transactions", required=False,
+                        help="Path to raw transactions NDJSON (overrides default raw/raw_transactions.ndjson)")
+    parser.add_argument("--raw-gst", dest="raw_gst", required=False,
+                        help="Path to raw GST NDJSON (overrides default raw/raw_gst.ndjson)")
+    parser.add_argument("--raw-credit-reports", dest="raw_credit_reports", required=False,
+                        help="Path to raw credit reports NDJSON")
+    parser.add_argument("--raw-mutual-funds", dest="raw_mutual_funds", required=False,
+                        help="Path to raw mutual funds NDJSON")
+    parser.add_argument("--raw-policies", dest="raw_policies", required=False,
+                        help="Path to raw policies NDJSON")
+    parser.add_argument("--raw-ocen", dest="raw_ocen", required=False,
+                        help="Path to raw OCEN applications NDJSON")
+    parser.add_argument("--raw-ondc", dest="raw_ondc", required=False,
+                        help="Path to raw ONDC orders NDJSON")
     args = parser.parse_args()
 
     cid = args.customer_id
@@ -554,7 +574,14 @@ def main():
 
     # Load data
     print(f"[INFO] Loading data from {raw_dir}...")
-    transactions = load_ndjson(os.path.join(raw_dir, 'raw_transactions.ndjson'))
+    # Allow overriding the raw input files via CLI for annotated/debug files
+    # Use annotated file with customer_id by default
+    default_txn_file = os.path.join(raw_dir, 'raw_transactions_with_customer_id.ndjson')
+    if not os.path.exists(default_txn_file):
+        default_txn_file = os.path.join(raw_dir, 'raw_transactions.ndjson')
+    transactions_path = args.raw_transactions if args.raw_transactions else default_txn_file
+    print(f"[INFO] Using transactions file: {transactions_path}")
+    transactions = load_ndjson(transactions_path)
 
     # Configure GST sampling to reduce CPU / client disconnects during heavy processing
     # Defaults: limit=5000 records unless overridden by env `GST_SAMPLE_LIMIT` or sampling rate `GST_SAMPLE_RATE`
@@ -567,7 +594,8 @@ def main():
     except Exception:
         gst_sample_rate = 0.0
 
-    gst_path = os.path.join(raw_dir, 'raw_gst.ndjson')
+    gst_path = args.raw_gst if args.raw_gst else os.path.join(raw_dir, 'raw_gst.ndjson')
+    print(f"[INFO] Using GST file: {gst_path}")
     # If a hard limit is specified, stop after reading that many records to avoid loading the entire file.
     if gst_sample_limit and gst_sample_limit > 0:
         gst_records = load_ndjson(gst_path, max_records=gst_sample_limit)
@@ -582,11 +610,36 @@ def main():
         print(f"[INFO] GST records further sampled from {orig_len} to {len(gst_records)} using rate={gst_sample_rate}")
 
     # Load remaining datasets
-    credit_reports = load_ndjson(os.path.join(raw_dir, 'raw_credit_reports.ndjson'))
-    mutual_funds = load_ndjson(os.path.join(raw_dir, 'raw_mutual_funds.ndjson'))
-    policies = load_ndjson(os.path.join(raw_dir, 'raw_policies.ndjson'))
-    ocen_apps = load_ndjson(os.path.join(raw_dir, 'raw_ocen_applications.ndjson'))
-    ondc_orders = load_ndjson(os.path.join(raw_dir, 'raw_ondc_orders.ndjson'))
+    credit_reports_path = args.raw_credit_reports if args.raw_credit_reports else os.path.join(raw_dir, 'raw_credit_reports.ndjson')
+    mutual_funds_path = args.raw_mutual_funds if args.raw_mutual_funds else os.path.join(raw_dir, 'raw_mutual_funds.ndjson')
+    policies_path = args.raw_policies if args.raw_policies else os.path.join(raw_dir, 'raw_policies.ndjson')
+    ocen_apps_path = args.raw_ocen if args.raw_ocen else os.path.join(raw_dir, 'raw_ocen_applications.ndjson')
+    ondc_orders_path = args.raw_ondc if args.raw_ondc else os.path.join(raw_dir, 'raw_ondc_orders.ndjson')
+
+    credit_reports = load_ndjson(credit_reports_path)
+    mutual_funds = load_ndjson(mutual_funds_path)
+    policies = load_ndjson(policies_path)
+    ocen_apps = load_ndjson(ocen_apps_path)
+    
+    # Filter loaded datasets to the requested customer where possible (preserve full lists if no customer_id present)
+    def _filter_by_customer(records):
+        if not records:
+            return []
+        filtered = [r for r in records if (r.get('customer_id') == cid) or (r.get('user_id') == cid) or (r.get('account_customer_id') == cid)]
+        # If filtering produced zero results but original records have explicit customer_id fields for other records,
+        # return the filtered result (empty). If none of the records contained customer_id/user_id keys, assume dataset
+        # is not customer-scoped and return original list.
+        if any(('customer_id' in r or 'user_id' in r or 'account_customer_id' in r) for r in records):
+            return filtered
+        return records
+
+    transactions = _filter_by_customer(transactions)
+    gst_records = _filter_by_customer(gst_records)
+    credit_reports = _filter_by_customer(credit_reports)
+    mutual_funds = _filter_by_customer(mutual_funds)
+    policies = _filter_by_customer(policies)
+    ocen_apps = _filter_by_customer(ocen_apps)
+    ondc_orders = _filter_by_customer(load_ndjson(ondc_orders_path))
 
     if gst_records is not None:
         print(f"[INFO] GST records loaded: {len(gst_records)} (limit={gst_sample_limit}, rate={gst_sample_rate})")

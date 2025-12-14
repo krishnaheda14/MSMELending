@@ -1,0 +1,124 @@
+{
+  "customer_id": "CUST_MSM_00004",
+  "logs": [
+    {
+      "timestamp": "2025-12-13T20:54:58.398134Z",
+      "level": "info",
+      "message": "Starting analytics generation pipeline..."
+    },
+    {
+      "timestamp": "2025-12-13T20:54:58.563404Z",
+      "level": "info",
+      "message": "Executing: python analytics/generate_summaries.py"
+    },
+    {
+      "timestamp": "2025-12-13T20:54:59.070224Z",
+      "level": "info",
+      "message": "[INFO] Starting comprehensive analytics generation for customer=CUST_MSM_00004"
+    },
+    {
+      "timestamp": "2025-12-13T20:54:59.103028Z",
+      "level": "info",
+      "message": "[INFO] Loading data from F:\\MSMELending\\data_lake\\raw..."
+    },
+    {
+      "timestamp": "2025-12-13T20:54:59.133369Z",
+      "level": "info",
+      "message": "[INFO] Using transactions file: F:\\MSMELending\\data_lake\\raw\\raw_transactions.ndjson"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:00.179815Z",
+      "level": "info",
+      "message": "[INFO] Using GST file: F:\\MSMELending\\data_lake\\raw\\raw_gst.ndjson"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.521459Z",
+      "level": "info",
+      "message": "[INFO] GST records loaded: 5000 (limit=5000, rate=0.0)"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.556350Z",
+      "level": "info",
+      "message": "[INFO] Generating analytics..."
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.591092Z",
+      "level": "info",
+      "message": "[INFO] Computing advanced financial metrics..."
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.629155Z",
+      "level": "info",
+      "message": "[INFO] Generating lending decision..."
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.676077Z",
+      "level": "info",
+      "message": "[INFO] Writing analytics files to F:\\MSMELending\\data_lake\\analytics..."
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.722547Z",
+      "level": "info",
+      "message": "[INFO] Analytics files written to: F:\\MSMELending\\data_lake\\analytics"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.759872Z",
+      "level": "info",
+      "message": "[INFO] Completed analytics generation for customer=CUST_MSM_00004"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.797213Z",
+      "level": "info",
+      "message": "  - Transactions: 2000"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.844659Z",
+      "level": "info",
+      "message": "  - GST Returns: 5000"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.892926Z",
+      "level": "info",
+      "message": "  - Mutual Funds: 0"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.943660Z",
+      "level": "info",
+      "message": "  - Insurance: 0"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:01.984868Z",
+      "level": "info",
+      "message": "  - OCEN Apps: 0"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:02.036486Z",
+      "level": "info",
+      "message": "  - ONDC Orders: 0"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:02.072810Z",
+      "level": "info",
+      "message": "  - Anomalies: 2"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:02.238823Z",
+      "level": "success",
+      "message": "Analytics generation completed successfully!"
+    },
+    {
+      "timestamp": "2025-12-13T20:55:02.264795Z",
+      "level": "info",
+      "message": "Analytics files in: F:\\MSMELending\\data_lake\\analytics"
+    }
+  ],
+  "steps": {
+    "3": {
+      "step": "analytics",
+      "progress": 100,
+      "status": "completed"
+    }
+  },
+  "pipelineStatus": "idle",
+  "last_updated": "2025-12-13T20:55:02.293659Z"
+}
