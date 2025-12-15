@@ -418,6 +418,8 @@ def compute_credit_behavior(transactions: List[Dict]) -> Dict:
         "debt_to_income_ratio": round(debt_to_income_ratio, 2),
         "payment_regularity_score": round(payment_regularity_score, 2),
         "loan_repayment_rate": round(loan_repayment_rate, 2),
+        "total_loan_payments": round(total_loan_payments, 2),
+        "loan_repayments_count": len(loan_repayments),
         "failed_transactions": failed_transactions[:5],  # Top 5 failures
         "calculation": {
             "bounce_count": {
@@ -513,14 +515,28 @@ def compute_business_health_metrics(gst_data: Dict, transactions: List[Dict], on
     # Provide both normalizations instead of a single capped ratio.
     percent_of_gst = (reconciliation_variance / gst_turnover * 100) if gst_turnover > 0 else None
     percent_of_bank = (reconciliation_variance / bank_credits * 100) if bank_credits > 0 else None
-    # Keep a conservative 'relative' ratio for backward compatibility (use min if available)
-    base_amount = None
-    if gst_turnover > 0 and bank_credits > 0:
-        base_amount = min(gst_turnover, bank_credits)
+    # New: relative coverage of bank credits vs GST turnover (capped at 100%) — more intuitive
+    relative_to_gst_pct = None
+    if gst_turnover > 0:
+        relative = (bank_credits / gst_turnover) * 100
+        # Cap to 100% to indicate at-most full coverage; values >100% indicate bank > gst but we show 100%
+        relative_to_gst_pct = min(100.0, round(relative, 2))
+    # Decide which revenue base to prefer when reconciliation variance is large
+    GST_UNRELIABLE_THRESHOLD_PCT = 50.0
+    percent_diff_gst = (reconciliation_variance / gst_turnover * 100) if gst_turnover > 0 else None
+    if percent_diff_gst is not None and percent_diff_gst > GST_UNRELIABLE_THRESHOLD_PCT and bank_credits > 0:
+        used_revenue_base = 'bank'
     elif gst_turnover > 0:
-        base_amount = gst_turnover
+        used_revenue_base = 'gst'
     else:
+        used_revenue_base = 'bank'
+
+    # Base amount for legacy ratio (use chosen revenue base)
+    if used_revenue_base == 'bank':
         base_amount = bank_credits
+    else:
+        base_amount = gst_turnover if gst_turnover > 0 else bank_credits
+
     reconciliation_ratio = (reconciliation_variance / base_amount * 100) if base_amount and base_amount > 0 else None
     
     # Working capital gap (simplified: current assets - current liabilities)
@@ -557,7 +573,15 @@ def compute_business_health_metrics(gst_data: Dict, transactions: List[Dict], on
     
     # TTM (Trailing Twelve Months) Revenue Growth
     # Sort months and calculate growth rates
-    sorted_months = sorted(monthly_credits.items())
+    # Select revenue monthly series based on chosen revenue base (GST vs Bank)
+    if used_revenue_base == 'gst' and isinstance(gst_data, dict) and gst_data.get('monthly_gst_turnover'):
+        # Use GST monthly turnover series when GST selected as the revenue base
+        revenue_monthly = dict(sorted(gst_data.get('monthly_gst_turnover', {}).items()))
+    else:
+        # Fallback to bank-derived monthly credits
+        revenue_monthly = dict(sorted(monthly_credits.items()))
+
+    sorted_months = sorted(revenue_monthly.items())
     
     # Credit growth rate: use CAGR if multi-year data, else simple growth
     credit_growth_rate = 0
@@ -687,7 +711,7 @@ def compute_business_health_metrics(gst_data: Dict, transactions: List[Dict], on
             qoq_expense_growth = ((last_quarter_exp - prev_quarter_exp) / prev_quarter_exp * 100)
     
     # Profit Margin (Net Surplus / Revenue * 100)
-    total_revenue = sum(monthly_credits.values())
+    total_revenue = sum(revenue_monthly.values())
     total_expenses = sum(monthly_debits.values())
     net_profit = total_revenue - total_expenses
     profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
@@ -696,6 +720,10 @@ def compute_business_health_metrics(gst_data: Dict, transactions: List[Dict], on
     annual_operating_cashflow = avg_monthly_surplus * 12
     
     return {
+        "relative_to_gst_pct": relative_to_gst_pct,
+        "used_revenue_base": used_revenue_base,
+        "gst_unreliable_threshold_pct": GST_UNRELIABLE_THRESHOLD_PCT,
+        "gst_variance_percent": round(percent_diff_gst, 2) if percent_diff_gst is not None else None,
         "gst_turnover": round(gst_turnover, 2),
         "bank_turnover": round(bank_credits, 2),
         "reconciliation_variance": round(reconciliation_variance, 2),
@@ -723,6 +751,10 @@ def compute_business_health_metrics(gst_data: Dict, transactions: List[Dict], on
                     "Absolute Variance": f"₹{reconciliation_variance:,.2f}",
                     "Relative to GST (%)": f"{percent_of_gst:.2f}%" if percent_of_gst is not None else "N/A",
                     "Relative to Bank (%)": f"{percent_of_bank:.2f}%" if percent_of_bank is not None else "N/A",
+                    "Relative Coverage (Bank vs GST) capped to 100%": f"{relative_to_gst_pct:.2f}%" if relative_to_gst_pct is not None else "N/A",
+                    "Relative to Bank (%)": f"{percent_of_bank:.2f}%" if percent_of_bank is not None else "N/A",
+                    "Used Revenue Base": f"{used_revenue_base}",
+                    "GST Variance Percent": f"{round(percent_diff_gst,2):.2f}%" if percent_diff_gst is not None else "N/A",
                     "Legacy Base (Min) used for one-line ratio": f"₹{base_amount:,.2f}" if base_amount is not None else "N/A",
                     "Legacy Variance Ratio": f"{reconciliation_ratio:.2f}%" if reconciliation_ratio is not None else "N/A"
                 },
