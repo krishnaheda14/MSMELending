@@ -13,13 +13,13 @@ from dateutil import parser as date_parser
 def normalize_date_to_month(date_str):
     """Normalize inconsistent date formats to YYYY-MM format."""
     if not date_str:
-        return '2025-01'
+        return None
     try:
         parsed = date_parser.parse(str(date_str), dayfirst=False)
         return parsed.strftime('%Y-%m')
-    except:
-        # Fallback for unparseable dates
-        return '2025-01'
+    except Exception:
+        # Unparseable dates should be flagged upstream rather than silently assigned
+        return None
 
 
 def compute_cashflow_metrics(transactions: List[Dict]) -> Dict:
@@ -30,6 +30,9 @@ def compute_cashflow_metrics(transactions: List[Dict]) -> Dict:
     monthly_credits = defaultdict(float)
     monthly_debits = defaultdict(float)
     counterparty_inflows = defaultdict(float)
+
+    missing_date_count = 0
+    missing_date_samples = []
 
     for txn in transactions:
         txn_type = (txn.get('type') or txn.get('transaction_type') or '').upper()
@@ -42,19 +45,27 @@ def compute_cashflow_metrics(transactions: List[Dict]) -> Dict:
             continue
 
         date_str = txn.get('date') or txn.get('transaction_date') or txn.get('txn_date') or ''
-        try:
-            month = date_str[:7] if date_str else '2025-01'
-        except Exception:
-            month = '2025-01'
+        month = normalize_date_to_month(date_str)
+        if month is None:
+            missing_date_count += 1
+            if len(missing_date_samples) < 10:
+                missing_date_samples.append({
+                    'amount': round(amount, 2),
+                    'raw_date': date_str,
+                    'txn': txn.get('narration') or txn.get('description') or ''
+                })
 
         if txn_type in ['CREDIT', 'CR', 'C', 'DEPOSIT']:
             credits.append(amount)
-            monthly_credits[month] += amount
+            # Only aggregate into monthly buckets when a valid month is present
+            if month:
+                monthly_credits[month] += amount
             counterparty = (txn.get('merchant_name') or txn.get('counterparty_account') or txn.get('description', '')[:30] or f'Customer-{len(counterparty_inflows) + 1:03d}')
             counterparty_inflows[counterparty] += amount
         else:
             debits.append(amount)
-            monthly_debits[month] += amount
+            if month:
+                monthly_debits[month] += amount
 
     total_inflow = sum(credits)
     total_outflow = sum(debits)
@@ -153,6 +164,10 @@ def compute_cashflow_metrics(transactions: List[Dict]) -> Dict:
         "monthly_inflow": {k: round(v, 2) for k, v in sorted(monthly_credits.items())},
         "monthly_outflow": {k: round(v, 2) for k, v in sorted(monthly_debits.items())},
         "monthly_surplus": {k: round(v, 2) for k, v in sorted_months},
+        "missing_date_transactions": {
+            "count": missing_date_count,
+            "samples": missing_date_samples
+        },
         "surplus_trend": surplus_trend,
         "cashflow_variance": round(cashflow_variance, 2),
         "calculation": {

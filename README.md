@@ -264,7 +264,34 @@ The application features 11 comprehensive tabs for complete financial analysis:
 
 ---
 
-## 🚀 Quick Start
+
+## 📸 Screenshots
+
+Below are actual screenshots from the MSME Lending Dashboard. All images are stored in [`docs/screenshots/`](docs/screenshots/).
+
+### Dashboard Overview
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Financial Summary
+![Financial Summary](docs/screenshots/financialsummary.png)
+
+### Detailed Metrics
+![Detailed Metrics](docs/screenshots/detailedmetrics.png)
+
+### Credit Scoring
+![Credit Scoring](docs/screenshots/creditscoring.png)
+
+### Credit Calculations
+![Credit Calculations](docs/screenshots/creditcalculations.png)
+
+### Pipeline Monitor
+![Pipeline](docs/screenshots/pipeline.png)
+
+> To update or add more screenshots: place your image in `docs/screenshots/` and add a markdown image tag here.
+
+---
+
+## �🚀 Quick Start
 
 ### Prerequisites
 - Python 3.11+

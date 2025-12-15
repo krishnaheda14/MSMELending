@@ -1,0 +1,23 @@
+# Screenshots Directory
+
+This folder contains screenshots of the MSME Lending application for documentation purposes.
+
+## How to Add Screenshots
+
+1. Place your screenshot files in this directory (e.g., `dashboard.png`, `analytics-view.png`)
+2. Reference them in README.md using relative paths:
+   ```markdown
+   ![Description](docs/screenshots/your-image.png)
+   ```
+
+## Recommended Image Formats
+- PNG for UI screenshots (lossless, supports transparency)
+- JPG for photos or images with many colors
+- GIF for animated demonstrations
+
+## Naming Convention
+Use descriptive kebab-case names:
+- `dashboard-overview.png`
+- `credit-score-breakdown.png`
+- `pipeline-monitor.png`
+- `analytics-insights.png`

@@ -103,18 +103,7 @@ const FinancialSummary = () => {
             <div className="mb-4">
               <h4 className="font-semibold text-gray-700 mb-2">Raw Entries</h4>
               <div className="space-y-2">
-                <button
-                  className="text-blue-600"
-                  onClick={() => { onClose(); setTimeout(() => setShowExpenseTxns({ type: 'raw_entries', txns: { top_10: data.expense_composition?.top_10_expenses || [], unknown: data.unknown_samples || [] } }), 120); }}
-                >
-                  Show top 10 expense entries
-                </button>
-                <button
-                  className="text-blue-600"
-                  onClick={() => { onClose(); setTimeout(() => setShowExpenseTxns({ type: 'unknown_samples', txns: data.unknown_samples || [] }), 120); }}
-                >
-                  Show unknown / uncategorized samples
-                </button>
+                {/* Raw entries links removed per UI cleanup */}
               </div>
             </div>
           )}

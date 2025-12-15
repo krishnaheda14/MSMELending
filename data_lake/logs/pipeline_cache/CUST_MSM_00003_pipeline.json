@@ -245,15 +245,155 @@
       "timestamp": "2025-12-15T09:08:10.958676Z",
       "level": "info",
       "message": "Analytics files in: F:\\MSMELending\\data_lake\\analytics"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:20.490080Z",
+      "level": "info",
+      "message": "Starting analytics generation pipeline..."
+    },
+    {
+      "timestamp": "2025-12-15T10:45:20.656801Z",
+      "level": "info",
+      "message": "Executing: python analytics/generate_summaries.py"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:21.297022Z",
+      "level": "info",
+      "message": "[INFO] Starting comprehensive analytics generation for customer=CUST_MSM_00003"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:21.348068Z",
+      "level": "info",
+      "message": "[INFO] Loading data from F:\\MSMELending\\data_lake\\raw..."
+    },
+    {
+      "timestamp": "2025-12-15T10:45:21.394453Z",
+      "level": "info",
+      "message": "[INFO] Using transactions file: F:\\MSMELending\\data_lake\\raw\\raw_transactions_with_customer_id.ndjson"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.114889Z",
+      "level": "info",
+      "message": "[INFO] Using GST file: F:\\MSMELending\\data_lake\\raw\\raw_gst.ndjson"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.392385Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=67689 filtered=1175 for customer=CUST_MSM_00003"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.483244Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=564 filtered=90 for customer=CUST_MSM_00003"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.526605Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=851 filtered=1 for customer=CUST_MSM_00003"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.573800Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=13 filtered=1 for customer=CUST_MSM_00003"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.620876Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=25 filtered=1 for customer=CUST_MSM_00003"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.667372Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=5 filtered=0 for customer=CUST_MSM_00003"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.712669Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=809 filtered=1 for customer=CUST_MSM_00003"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.752991Z",
+      "level": "info",
+      "message": "[INFO] GST records loaded: 90 (limit=5000, rate=0.0)"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.798326Z",
+      "level": "info",
+      "message": "[INFO] Generating analytics..."
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.846297Z",
+      "level": "info",
+      "message": "[INFO] Computing advanced financial metrics..."
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.916267Z",
+      "level": "info",
+      "message": "[ERROR] Analytics generation failed: '<' not supported between instances of 'NoneType' and 'str'"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:22.957171Z",
+      "level": "info",
+      "message": "Traceback (most recent call last):"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.003796Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\generate_summaries.py\", line 1311, in <module>"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.048788Z",
+      "level": "info",
+      "message": "    main()"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.099512Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\generate_summaries.py\", line 765, in main"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.143711Z",
+      "level": "info",
+      "message": "    business_health = compute_business_health_metrics(gst_summary, transactions, ondc_summary)"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.188393Z",
+      "level": "info",
+      "message": "                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.236254Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\financial_metrics.py\", line 618, in compute_business_health_metrics"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.279286Z",
+      "level": "info",
+      "message": "    revenue_monthly = dict(sorted(monthly_credits.items()))"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.334106Z",
+      "level": "info",
+      "message": "                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.374770Z",
+      "level": "info",
+      "message": "TypeError: '<' not supported between instances of 'NoneType' and 'str'"
+    },
+    {
+      "timestamp": "2025-12-15T10:45:23.563578Z",
+      "level": "error",
+      "message": "Analytics failed with code 2"
     }
   ],
   "steps": {
     "3": {
       "step": "analytics",
-      "progress": 100,
-      "status": "completed"
+      "progress": 0,
+      "status": "failed"
     }
   },
   "pipelineStatus": "idle",
-  "last_updated": "2025-12-15T09:08:10.977337Z"
+  "last_updated": "2025-12-15T10:45:23.588444Z"
 }
