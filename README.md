@@ -1,4 +1,4 @@
-# MSME Lending Solution — Indian Financial Data Lake
+# MSME Lending Solution — AA-Based Credit Lending System
 
 ## Problem Statement
 
@@ -26,19 +26,49 @@ A comprehensive MSME credit decisioning platform leveraging:
 - Compliant with RBI AA specs and DPDP Act 2023
 - Fetch multi-source financial data: Banking, GST, Bureau, Insurance, MF, ONDC, OCEN
 
-### 2. AI-Powered Multi-Source Analytics
+### 2. Multi-Source Analytics
 - 7 data sources aggregated per customer (vs. traditional 1-2)
 - Automated cashflow analysis, GST compliance scoring, anomaly detection
-- Composite credit scoring combining:
-  - Cashflow Stability (45% weight) — transaction patterns, income/expense ratios
-  - Business Health (35% weight) — GST turnover, ONDC order diversity, MF investments
-  - Debt Capacity (20% weight) — credit utilization, OCEN approval rate, insurance coverage
+- **Enhanced Composite Credit Scoring** (0-100 scale):
+  - **Cashflow Stability (45% weight)**:
+    - Surplus Ratio (0-15 points): Measures net surplus as % of revenue
+    - Income Stability CV (0-15 points): Lower CV = more stable income
+    - Seasonality Index (0-15 points): Extreme seasonality penalized
+  - **Business Health (35% weight)**:
+    - GST Compliance (0-10 points): Return filing regularity
+    - Revenue Growth (0-15 points): YoY and QoQ growth trends
+    - Working Capital (0-10 points): Positive gap indicates healthy liquidity
+  - **Debt Capacity (20% weight)**:
+    - Credit Score Component (0-10 points): Based on default probability
+    - DTI Impact (0-5 points): Lower debt-to-income = better capacity
+    - OCEN Approval (0-3 points): Loan application approval rate
+    - Payment Regularity (0-2 points): Consistent payment history
+- **Enhanced Detection Patterns**:
+  - 11 bounce keywords: BOUNCE, BOUNCED, FAILED, FAILURE, REJECT, REJECTED, INSUFFICIENT, RETURN, RETURNED, DISHONOUR, DISHONORED
+  - 5 EMI keywords: EMI, E.M.I, EQUATED, INSTALLMENT, INSTALMENT
+  - 8+ loan keywords: LOAN, TERM LOAN, BUSINESS LOAN, PERSONAL LOAN, HOME LOAN, etc.
+  - Category-based detection: LOAN_REPAYMENT category automatically flagged
 
 ### 3. Explainable AI & Transparency
-- Click-to-reveal calculation breakdowns for every metric
-- Separate Methodology and Calculations tabs showing real numbers and formulas
-- Debug panels in charts for raw data inspection
-- All metrics include: Formula, Breakdown with actual values, Risk interpretation
+- **Interactive Metric Exploration**: Click any ℹ️ button to see:
+  - Mathematical formula used for calculation
+  - Step-by-step breakdown with actual customer values
+  - Risk interpretation and business impact
+  - Sample transactions where applicable
+- **Separate Methodology Tab**: Complete documentation of:
+  - Composite scoring formula derivation
+  - Weight allocation rationale (45% Cashflow, 35% Business Health, 20% Debt Capacity)
+  - Risk thresholds: Approve (≥75), Review (60-74), Caution (<60)
+- **Credit Calculations Tab**: Per-customer numeric walkthrough:
+  - Shows actual values from customer analytics
+  - Simple arithmetic demonstrating score derivation
+  - Component-wise contribution to final score
+- **Debug Panels**: Collapsible raw data inspectors in charts
+- **Sample Transaction Modals**: 
+  - Top 10 expense transactions with amounts and dates
+  - Failed/bounced transactions for credit analysis
+  - EMI transactions for debt service calculations
+  - Unknown/uncategorized transactions for manual review
 
 ### 4. Pre-loaded Demo Datasets for Quick Demonstration
 - 10 customer profiles with varying risk levels and specialized behaviors
@@ -67,6 +97,8 @@ Step 3: Generate Analytics (calculate 7-source summaries + earnings/spendings)
 Step 4: Calculate Credit Score (composite weighted score + AI insights)
          ↓
 Lending Decision (Approve / Review / Reject)
+         
+      Note: The profile generator and analytics pipeline are month-aware — stable-income profiles now normalize monthly credit totals (targeting ±0.5% month-to-month variability) and growth/decline profiles apply month-wise multipliers to produce clear positive or negative trends. EMI and bounce profiles inject explicit transactions (EMIs/FAILED) rather than only mutating existing items to improve detectability.
 ```
 
 ### Architecture
@@ -130,6 +162,7 @@ Lending Decision (Approve / Review / Reject)
 - Per-customer seeding (hash of customer_id → unique deterministic data)
 - Configurable messiness (date format variation, missing fields, duplicates)
 - Specialized profile modifications (seasonality, debt, growth patterns)
+  - Month-aware profile modifications: stable income normalizes monthly totals, growth/decline apply month-wise multipliers, and explicit transaction injection is used for EMI/bounce/concentration profiles to ensure detectability in analytics
 
 ---
 
@@ -163,29 +196,60 @@ Lending Decision (Approve / Review / Reject)
 - **OCEN Summary** — application count, approval rates, loan amounts
 
 ### Frontend Dashboard
-- **Lending Analytics & AI Insights** — main view with:
-  - Prominent credit score display with click-to-expand component derivations
-  - Transaction, GST, ONDC, Mutual Funds, Insurance, OCEN, Anomaly cards
-  - Debug panel in GST section (collapsible raw data inspector)
-  - AI-generated lending recommendation (formatted with bold/lists)
-  - Enter key submit on customer ID input
-- **Earnings vs Spendings** — comprehensive financial analysis page:
-  - Customer ID prominently displayed at top with generation timestamp
-  - Final Assessment moved to top for immediate visibility
-  - Positive/Negative indicators count displayed
-  - 30+ financial metrics with interactive info buttons
-  - Click any ℹ️ button to see: Formula, Breakdown with actual values, Risk explanation
-  - Monthly cashflow display with expand/collapse functionality (first 10 items shown)
-  - All currency values formatted with thousand separators
-- **Credit Methodology** — comprehensive explainability document
-- **Credit Calculations** — per-customer numeric examples with simple walkthrough
-- **Pipeline Monitor** — live progress bars for generate/clean/analytics/calculate steps:
-  - On-demand customer generation — click to generate random customer IDs
-  - Real-time execution debugging — shows current step and exact command running
-  - Collapsible debug panel — displays pipeline status and steps completed
-  - Live logs with timestamps — color-coded by severity (error/warning/success/info)
-  - Specialized customer profile selection (High Seasonality, High Debt, Growth, etc.)
-- **Dataset Viewer** — raw/clean data inspection with limits
+
+The application features 11 comprehensive tabs for complete financial analysis:
+
+1. **Dashboard** — System overview and quick stats
+
+2. **Pipeline Monitor** — Real-time data generation and processing:
+   - On-demand customer generation with random ID generator
+   - 4-step pipeline execution with live progress tracking
+   - Real-time execution debugging showing current command
+   - Collapsible debug panel with color-coded logs (error/warning/success/info)
+   - Specialized customer profile selection (High Seasonality, High Debt, Growth, etc.)
+
+3. **Analytics & Insights** — Main lending dashboard:
+   - Prominent credit score display with click-to-expand component derivations
+   - Transaction, GST, ONDC, Mutual Funds, Insurance, OCEN, Anomaly cards
+   - Debug panel in GST section (collapsible raw data inspector)
+   - AI-generated lending recommendation (Deepseek/Gemini with auto-fallback)
+   - Enter key submit on customer ID input
+
+4. **Financial Summary (P&L)** — Comprehensive profit & loss statement:
+   - Total Revenue, Total Expenses, Operating Profit with detailed calculations
+   - Click any metric to see: Formula, Breakdown with actual values, Explanation
+   - Top 10 expense categories with sample transactions
+   - Unknown transactions identification and categorization
+   - All values with ₹ formatting and thousand separators
+
+5. **Detailed Metrics (Earnings vs Spendings)** — 30+ financial health indicators:
+   - Customer ID prominently displayed with generation timestamp
+   - Final Assessment at top for immediate visibility
+   - Positive/Negative indicators count displayed
+   - **Cashflow Metrics**: Inflow/Outflow Ratio, Net Surplus, Surplus Ratio, Income Stability CV, Seasonality Index (with mean/std/CV breakdown)
+   - **Growth Metrics**: Credit Growth Rate, TTM Revenue Growth, QoQ Revenue Growth, Expense Growth Rate, Profit Margin
+   - **Credit Scores**: Bounce Count, EMI Consistency, Credit Utilization, Default Probability, Debt-to-Income, Payment Regularity, Loan Repayment Rate
+   - **Business Health**: Working Capital Gap (days), Annual Operating Cashflow
+   - Click any ℹ️ button to see: Formula, Breakdown with actual dataset values, Risk interpretation
+   - Monthly cashflow display with expand/collapse (first 10 items shown)
+   - Removed: GST vs Bank Reconciliation (was showing inflated percentages)
+
+6. **Credit Methodology** — Comprehensive explainability document:
+   - Composite scoring formula: Cashflow Stability (45%) + Business Health (35%) + Debt Capacity (20%)
+   - Detailed breakdown of each component calculation
+   - Risk thresholds and lending decision criteria
+
+7. **Credit Calculations** — Per-customer numeric examples with walkthrough:
+   - Step-by-step calculation showing actual values
+   - Simple arithmetic demonstrating how scores are derived
+
+8. **API Console** — Interactive REST API testing interface
+
+9. **Datasets** — Raw/clean data inspection with record limits
+
+10. **Logs** — Validation error logs and cleaning reports
+
+11. **File Manager** — Data file management and cleanup utilities
 
 ### AI Integration
 - **Deepseek API** (primary) — OpenAI-compatible endpoint
@@ -235,6 +299,54 @@ python pipeline/clean_data.py --customer-id CUST_MSM_00001
 python analytics/generate_summaries.py --customer-id CUST_MSM_00001
 ```
 
+---
+
+## Financial Summary (P&L)
+
+This project includes a per-customer Financial Summary (Profit & Loss) that aggregates monthly inflows and outflows and exposes both high-level and drill-down metrics.
+
+- **Key metrics**:
+  - **Total Revenue (Inflow)**: Sum of all credit transactions and inflow records across banking, GST, ONDC and MF redemptions.
+  - **Total Expenses (Outflow)**: Sum of debit transactions, regular payments and withdrawals.
+  - **Net Surplus**: Total Revenue − Total Expenses.
+  - **Surplus Ratio**: Net Surplus / Total Revenue (expressed as %).
+- **How to interpret**: Positive surplus and a surplus ratio >20% indicate healthy operating cashflow for small MSMEs; negative values indicate potential working-capital shortfalls.
+
+Notes:
+- Every metric includes an attached calculation object in `analytics/*_earnings_spendings.json` with the formula, the dataset values used, and a short interpretation.
+- The Financial Summary supports monthly drill-down and shows the top contributing inflow sources (bank credits, GST turnover, ONDC orders, MF redemptions).
+
+## Detailed Metrics (what we compute and why)
+
+The analytics engine computes 30+ metrics grouped as follows. Each metric includes: formula, dataset fields used, and a brief risk interpretation.
+
+- **Cashflow Metrics**
+  - Income Stability (CV): coefficient of variation of monthly inflows. Formula: CV = std(inflow_monthly) / mean(inflow_monthly). Lower is better. Used to detect volatile income.
+  - Seasonality Index: ratio of peak-month inflow to median-month inflow (or percentage variance across 12 months). High values indicate seasonal business models.
+  - Inflow/Outflow Ratio & Net Surplus: see Financial Summary above.
+
+- **Growth Metrics**
+  - Trailing 12M Growth Rate (TTM): (sum_last_12m − sum_prev_12m) / sum_prev_12m.
+  - QoQ Growth: quarter-over-quarter percentage change.
+
+- **Credit & Repayment Metrics**
+  - Bounce Count: count of transactions/narrations matching bounce keywords.
+  - EMI Consistency: fraction of months where EMI-like payments were observed.
+  - Credit Utilization: loan outstanding / sanctioned_limit (when available).
+
+- **Business Health**
+  - GST Reconciliation %: fraction of GST-declared turnover that maps to bank credits for the same months.
+  - ONDC Provider Diversity: number of unique ONDC providers selling to the customer.
+  - Investment Cushion: mutual fund current_value as a fraction of monthly operating expense.
+
+- **Concentration Metrics**
+  - Top-customer dependence: share of inflows from top-1 or top-5 counterparties.
+  - Industry / State diversity: number of unique customer states or business categories contributing revenue.
+
+Where applicable, the frontend exposes each metric's formula via the ℹ️ help icon and shows a worked example using the live customer's values (see the `Credit Calculations` tab).
+
+---
+
 ### 4. Start Backend API
 ```bash
 cd api_panel
@@ -258,13 +370,31 @@ Frontend runs at `http://localhost:3000`
 
 ---
 
-## 📖 Usage Guide
+## � Demo Customer Profiles
+
+The system includes 10 pre-configured customer profiles, each demonstrating a different lending scenario. Each profile is designed to have **ONE primary issue** that stands out prominently in the analytics.
+
+| Customer ID | Profile | Primary Focus | Expected Metric |
+|-------------|---------|---------------|-----------------|
+| CUST_MSM_00001 | Baseline | Healthy balanced business | All metrics normal |
+| CUST_MSM_00002 | High Seasonality | Extreme monthly variation | Seasonality >100% |
+| CUST_MSM_00003 | High Debt | Heavy loan burden | Debt Service Ratio >40% |
+| CUST_MSM_00004 | High Growth | Strong upward trend | Credit Growth >50% |
+| CUST_MSM_00005 | Stable Income | Very predictable cashflow | Income CV <15% |
+| CUST_MSM_00006 | High Bounce Rate | Payment failures | Bounce Count >10 |
+| CUST_MSM_00007 | Declining Business | Revenue decline | Negative growth -20% to -40% |
+| CUST_MSM_00008 | Customer Concentration | Revenue from few clients | Top customer >70% |
+| CUST_MSM_00009 | High Growth (v2) | Strong growth variant | Credit Growth >50% |
+| CUST_MSM_00010 | High Seasonality (v2) | Seasonal variant | Seasonality >100% |
+
+
+
+## �📖 Usage Guide
 
 ### Generate Data for Multiple Customers
 
 **Option 1: Via Pipeline Monitor UI (Recommended)**
 1. Open `http://localhost:3000` → go to **Pipeline Monitor** tab
-2. Click **"Generate Random Customer ID"** button (green section at top)
 3. A new random customer ID will be assigned (e.g., `CUST_MSM_47832`)
 4. Click pipeline steps in order to generate data for that customer:
    - Step 1: Validate Consent & Fetch Data
@@ -286,8 +416,6 @@ python generate_all.py --customer-id CUST_MSM_00002
 python pipeline/clean_data.py --customer-id CUST_MSM_00002
 python analytics/generate_summaries.py --customer-id CUST_MSM_00002
 ```
-
-**Important**: Each `customer_id` is hashed to seed the random number generator, ensuring reproducible yet distinct data per customer. You **must run the full pipeline** (generate → clean → analytics) for each new customer to get unique raw data.
 
 ### Run Full Pipeline via UI
 1. Open `http://localhost:3000`
@@ -392,7 +520,7 @@ MSMELending/
 
 ### AI Provider Keys (`data_lake/.env`)
 ```bash
-DEEPSEEK_API_KEY=sk-553a2062a03e4a88aec97575bd25d268
+DEEPSEEK_API_KEY=yourdeepseek_key_here
 GEMINI_API_KEY=your_gemini_key_here
 MAX_AI_PROMPT_TOKENS=1500
 MAX_AI_RESPONSE_TOKENS=1500

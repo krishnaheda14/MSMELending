@@ -134,6 +134,48 @@ Credit Score = (Cashflow × 0.45) + (Business × 0.35) + (Debt × 0.20)
       </section>
 
       <section className="bg-white rounded-lg p-4 shadow">
+        <h3 className="font-semibold">Real-time Worked Example (this customer)</h3>
+        <p className="text-sm text-gray-600">This uses the live component scores and shows the step-by-step weighted calculation.</p>
+        <div className="mt-3 p-3 bg-gray-50 rounded">
+          {
+            (() => {
+              const a = Number(cashflowScore || 0);
+              const b = Number(businessScore || 0);
+              const c = Number(debtScore || 0);
+              const stepA = +(a * 0.45).toFixed(2);
+              const stepB = +(b * 0.35).toFixed(2);
+              const stepC = +(c * 0.20).toFixed(2);
+              const total = +(stepA + stepB + stepC).toFixed(2);
+              return (
+                <div>
+                  <ul className="text-sm text-gray-800 list-inside list-disc">
+                    <li>Cashflow Stability: <strong>{a}</strong> → {a} × 0.45 = <strong>{stepA}</strong></li>
+                    <li>Business Health: <strong>{b}</strong> → {b} × 0.35 = <strong>{stepB}</strong></li>
+                    <li>Debt Capacity: <strong>{c}</strong> → {c} × 0.20 = <strong>{stepC}</strong></li>
+                  </ul>
+                  <div className="mt-2 text-sm">
+                    <p>Summation: <strong>{stepA} + {stepB} + {stepC} = {total}</strong></p>
+                    <p className="text-xs text-gray-600 mt-1">Displayed score uses available `overall.calculated_credit_score` when present; this example computes from component scores.</p>
+                  </div>
+
+                  <div className="mt-3 p-2 bg-white rounded border text-sm">
+                    <strong>Underlying real-time parameters (sample):</strong>
+                    <ul className="mt-2 list-disc list-inside text-sm text-gray-700">
+                      <li>Average txn: ₹{Math.round(avgTxn).toLocaleString()}</li>
+                      <li>Monthly GST turnover: ₹{Math.round(gstTurnover).toLocaleString()}</li>
+                      <li>ONDC provider diversity: {providerDiversity}</li>
+                      <li>Mutual funds current value: ₹{Math.round(mf.total_value || mf.current_value || 0).toLocaleString()}</li>
+                      <li>Insurance sum assured (sample): ₹{Math.round(ins.total_sum_assured || ins.sum_assured || 0).toLocaleString()}</li>
+                    </ul>
+                  </div>
+                </div>
+              );
+            })()
+          }
+        </div>
+      </section>
+
+      <section className="bg-white rounded-lg p-4 shadow">
         <h3 className="font-semibold">Detailed Component Calculations</h3>
 
         <div className="mt-3 space-y-3">
