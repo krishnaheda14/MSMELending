@@ -18,6 +18,7 @@ const AnalyticsInsights = () => {
   const [error, setError] = useState(null);
   const [calcModal, setCalcModal] = useState({ open: false, title: '', data: null });
   const [debugMinimized, setDebugMinimized] = useState(true);
+  const [showExpenseTxns, setShowExpenseTxns] = useState(null);
 
   useEffect(() => {
     if (customerId) {
@@ -93,10 +94,13 @@ const AnalyticsInsights = () => {
 
     return (
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-          <BarChart3 className="w-6 h-6 mr-2 text-primary-600" />
-          Overall Business Insights
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-800 flex items-center">
+            <BarChart3 className="w-6 h-6 mr-2 text-primary-600" />
+            Overall Business Insights
+          </h3>
+          <button onClick={() => setShowExpenseTxns({ type: 'raw_entries', txns: { top_10: analytics?.expense_composition?.top_10_expenses || [], unknown: analytics?.unknown_samples || [] } })} className="text-sm text-blue-600 hover:text-blue-800">Show raw entries</button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
@@ -933,6 +937,96 @@ const AnalyticsInsights = () => {
       {renderInsuranceInsights()}
       {renderOCENInsights()}
       {renderONDCInsights()}
+
+      {showExpenseTxns && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowExpenseTxns(null)}>
+          <div className="bg-white rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-gray-800">{showExpenseTxns.type === 'raw_entries' ? 'Raw Entries' : `Transactions — ${showExpenseTxns.type.replace(/_/g, ' ')}`}</h3>
+              <button onClick={() => setShowExpenseTxns(null)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+            </div>
+
+            {showExpenseTxns.type === 'raw_entries' ? (
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">Top 10 Expenses</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant / Description</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {(showExpenseTxns.txns.top_10 && showExpenseTxns.txns.top_10.length > 0) ? showExpenseTxns.txns.top_10.map((t, i) => (
+                          <tr key={`top_${i}`}>
+                            <td className="px-4 py-2 text-sm text-gray-700">{t.date || t.transaction_date || '-'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-700">{t.merchant || t.description || t.narration || t.counterparty || '-'}</td>
+                            <td className="px-4 py-2 text-sm text-right text-gray-700">{formatCurrency(t.amount || t.value || t.order_value || t.total_amount || 0)}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="p-4">No top-10 expense entries available.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">Unknown / Uncategorized Samples</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Source / Narration</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {(showExpenseTxns.txns.unknown && showExpenseTxns.txns.unknown.length > 0) ? showExpenseTxns.txns.unknown.map((t, i) => (
+                          <tr key={`unk_${i}`}>
+                            <td className="px-4 py-2 text-sm text-gray-700">{t.date || t.txn_date || '-'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-700">{t.merchant || t.narration || t.description || t.source || '-'}</td>
+                            <td className="px-4 py-2 text-sm text-right text-gray-700">{formatCurrency(t.amount || t.value || 0)}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="p-4">No unknown samples available.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant / Narration</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {showExpenseTxns.txns && showExpenseTxns.txns.length > 0 ? showExpenseTxns.txns.map((t, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-2 text-sm text-gray-700">{t.date || t.txn_date || '-'}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700">{t.merchant || t.description || t.narration || '-'}</td>
+                        <td className="px-4 py-2 text-sm text-right text-gray-700">{formatCurrency(t.amount || t.value || 0)}</td>
+                      </tr>
+                    )) : (
+                      <tr><td className="p-4">No sample transactions available.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Calculation modal */}
       {calcModal.open && (

@@ -886,12 +886,7 @@ def main():
     elif credit_behavior.get('emi_consistency_score', 0) < 60:
         negatives.append(f"Poor EMI consistency: {credit_behavior['emi_consistency_score']:.1f}%")
     
-    # Evaluate business health
-    reconciliation_var = abs(business_health.get('reconciliation_variance', 100))
-    if reconciliation_var < 10:
-        positives.append(f"Good GST-Bank reconciliation: {reconciliation_var:.1f}% variance")
-    elif reconciliation_var > 25:
-        negatives.append(f"Poor GST-Bank reconciliation: {reconciliation_var:.1f}% variance")
+
     
     if business_health.get('working_capital_gap', 100) < 30:
         positives.append(f"Efficient working capital: {business_health['working_capital_gap']:.1f} days")
@@ -1225,6 +1220,19 @@ def main():
             "sum_raw": round(debt_capacity_val, 2),
             "final_debt_capacity": debt_capacity
         }
+        # Build a human-friendly derivation string similar to business_explanation
+        try:
+            cov_ratio = (insurance_coverage / revenue_for_insurance) if revenue_for_insurance > 0 else None
+            debt_derivation = (
+                f"Credit Component: {debt_capacity_breakdown['credit_component']:.2f}/30 (default_prob={default_prob:.1f}%), "
+                f"Repayment Bonus: {debt_capacity_breakdown['repayment_bonus']:.2f}/5 (repayment_rate={repayment_rate:.1f}%), "
+                f"DTI: {debt_capacity_breakdown['dti_component']:.2f}/15 (debt_to_income={debt_to_income:.1f}%), "
+                f"OCEN: {debt_capacity_breakdown['ocen_component']:.2f}/10 (approval_rate={ocen_approval:.1f}%), "
+                f"Insurance: {debt_capacity_breakdown['insurance_component']:.2f}/10 (coverage=₹{insurance_coverage:,.0f}{', revenue_base=₹{:,}'.format(int(revenue_for_insurance)) if revenue_for_insurance else ''}), "
+                f"Regularity Bonus: {debt_capacity_breakdown['regularity_bonus']:.2f}/5 (payment_regularity={payment_regularity:.1f}%) = {debt_capacity}/100"
+            )
+        except Exception:
+            debt_derivation = "Credit utilization, OCEN approval rate, insurance coverage, loan-to-income ratio"
     except Exception as e:
         debt_capacity = round(random.uniform(40, 80), 1)
         debt_capacity_breakdown = {"error": str(e)}
@@ -1268,7 +1276,7 @@ def main():
             "weights": {"cashflow": 0.45, "business": 0.35, "debt": 0.20},
             "cashflow_derivation": cashflow_explanation if isinstance(cashflow_explanation, str) else "Transaction volume consistency, income/expense ratio, monthly variance",
             "business_derivation": business_explanation if isinstance(business_explanation, str) else "GST compliance, ONDC order diversity, revenue trends, mutual fund investments",
-            "debt_derivation": "Credit utilization, OCEN approval rate, insurance coverage, loan-to-income ratio",
+            "debt_derivation": debt_derivation if 'debt_derivation' in locals() else "Credit utilization, OCEN approval rate, insurance coverage, loan-to-income ratio",
             "explanation": f"Cashflow ({cashflow_stability}) weighted 45% + Business Health ({business_health}) weighted 35% + Debt Capacity ({debt_capacity}) weighted 20% = {composite_credit_score}"
         },
         "recommendation": "approve" if composite_credit_score >= 75 else "review" if composite_credit_score >= 60 else "caution"

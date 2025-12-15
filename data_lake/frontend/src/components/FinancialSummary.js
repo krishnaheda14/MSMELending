@@ -10,6 +10,7 @@ const FinancialSummary = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showCalculation, setShowCalculation] = useState(null);
+  const [showExpenseTxns, setShowExpenseTxns] = useState(null);
 
   const fetchData = async () => {
     if (!customerId) return;
@@ -96,6 +97,27 @@ const FinancialSummary = () => {
             <h3 className="text-xl font-bold text-gray-800">{title}</h3>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
           </div>
+
+          {/* Buttons to open raw entries from top-level payload */}
+          {data && (
+            <div className="mb-4">
+              <h4 className="font-semibold text-gray-700 mb-2">Raw Entries</h4>
+              <div className="space-y-2">
+                <button
+                  className="text-blue-600"
+                  onClick={() => { onClose(); setTimeout(() => setShowExpenseTxns({ type: 'raw_entries', txns: { top_10: data.expense_composition?.top_10_expenses || [], unknown: data.unknown_samples || [] } }), 120); }}
+                >
+                  Show top 10 expense entries
+                </button>
+                <button
+                  className="text-blue-600"
+                  onClick={() => { onClose(); setTimeout(() => setShowExpenseTxns({ type: 'unknown_samples', txns: data.unknown_samples || [] }), 120); }}
+                >
+                  Show unknown / uncategorized samples
+                </button>
+              </div>
+            </div>
+          )}
           
           {calculation && (
             <>
@@ -164,8 +186,20 @@ const FinancialSummary = () => {
   // Calculate key P&L metrics
   const totalRevenue = cashflow_metrics?.total_inflow || 0;
   const totalExpenses = cashflow_metrics?.total_outflow || 0;
-  const netProfit = cashflow_metrics?.net_surplus || 0;
-  const profitMargin = business_health?.profit_margin || 0;
+  const operatingProfit = cashflow_metrics?.net_surplus || 0;
+  const operatingProfitMargin = business_health?.profit_margin || cashflow_metrics?.surplus_ratio || 0;
+  
+  // Create detailed operating profit calculation
+  const operatingProfitCalculation = {
+    formula: "Total Revenue (Inflow) − Total Expenses (Outflow)",
+    breakdown: {
+      "Total Revenue (Credits)": `₹${formatNumber(totalRevenue)}`,
+      "Total Expenses (Debits)": `₹${formatNumber(totalExpenses)}`,
+      "Operating Profit (Net Surplus)": `₹${formatNumber(operatingProfit)}`,
+      "Operating Profit Margin": `${formatNumber(operatingProfitMargin)}%`
+    },
+    explanation: `Operating profit of ₹${formatNumber(operatingProfit)} calculated as Total Revenue (₹${formatNumber(totalRevenue)}) minus Total Expenses (₹${formatNumber(totalExpenses)}). Operating Profit Margin of ${formatNumber(operatingProfitMargin)}% indicates ${operatingProfitMargin > 20 ? 'strong profitability' : operatingProfitMargin > 10 ? 'healthy margins' : operatingProfitMargin > 0 ? 'positive but thin margins' : 'unprofitable operations'}. This represents the business's core operational efficiency before interest, taxes, and non-operating items.`
+  };
   
   // Loan metrics
   const totalLoanPayments = (credit_behavior?.debt_to_income_ratio / 100) * totalRevenue || 0;
@@ -247,6 +281,96 @@ const FinancialSummary = () => {
         />
       )}
 
+      {showExpenseTxns && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowExpenseTxns(null)}>
+          <div className="bg-white rounded-lg p-6 max-w-3xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-gray-800">{showExpenseTxns.type === 'raw_entries' ? 'Raw Entries' : `Transactions — ${showExpenseTxns.type.replace(/_/g, ' ')}`}</h3>
+              <button onClick={() => setShowExpenseTxns(null)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+            </div>
+
+            {showExpenseTxns.type === 'raw_entries' ? (
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">Top 10 Expenses</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant / Description</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {(Array.isArray(showExpenseTxns.txns?.top_10) && showExpenseTxns.txns.top_10.length > 0) ? showExpenseTxns.txns.top_10.map((t, i) => (
+                          <tr key={`top_${i}`}>
+                            <td className="px-4 py-2 text-sm text-gray-700">{t.date || t.transaction_date || '-'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-700">{t.merchant || t.description || t.narration || t.counterparty || '-'}</td>
+                            <td className="px-4 py-2 text-sm text-right text-gray-700">{formatCurrency(t.amount || t.value || t.order_value || t.total_amount || 0)}</td>
+                          </tr>
+                        )) : (
+                          <tr><td colSpan="3" className="p-4 text-center text-gray-500">No top-10 expense entries available.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-gray-700 mb-2">Unknown / Uncategorized Samples</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Source / Narration</th>
+                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {(Array.isArray(showExpenseTxns.txns?.unknown) && showExpenseTxns.txns.unknown.length > 0) ? showExpenseTxns.txns.unknown.map((t, i) => (
+                          <tr key={`unk_${i}`}>
+                            <td className="px-4 py-2 text-sm text-gray-700">{t.date || t.txn_date || '-'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-700">{t.merchant || t.narration || t.description || t.source || '-'}</td>
+                            <td className="px-4 py-2 text-sm text-right text-gray-700">{formatCurrency(t.amount || t.value || 0)}</td>
+                          </tr>
+                        )) : (
+                          <tr><td colSpan="3" className="p-4 text-center text-gray-500">No unknown samples available.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Merchant / Narration</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(Array.isArray(showExpenseTxns.txns) && showExpenseTxns.txns.length > 0) ? showExpenseTxns.txns.map((t, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-2 text-sm text-gray-700">{t.date || t.txn_date || '-'}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700">{t.merchant || t.description || t.narration || '-'}</td>
+                        <td className="px-4 py-2 text-sm text-right text-gray-700">{formatCurrency(t.amount || t.value || 0)}</td>
+                      </tr>
+                    )) : (
+                      <tr><td colSpan="3" className="p-4 text-center text-gray-500">No sample transactions available.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Customer Selection */}
       <div className="bg-white p-4 rounded-lg shadow-md">
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -286,9 +410,10 @@ const FinancialSummary = () => {
 
       {/* Income Statement Section */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-between">
           <DollarSign className="w-6 h-6 mr-2" />
-          Income Statement (P&L)
+          <span>Income Statement (P&L)</span>
+          <button onClick={() => setShowExpenseTxns({ type: 'raw_entries', txns: { top_10: data.expense_composition?.top_10_expenses || [], unknown: data.unknown_samples || [] } })} className="text-sm text-blue-600 hover:text-blue-800">Show raw entries</button>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard
@@ -299,7 +424,7 @@ const FinancialSummary = () => {
             color="green"
             trend={creditGrowth > 0 ? 'up' : 'down'}
             trendValue={`${formatPercent(Math.abs(creditGrowth))} growth`}
-            calculation={cashflow_metrics?.calculation?.inflow_outflow_ratio}
+            calculation={operatingProfitCalculation}
           />
           <StatCard
             title="Total Expenses (Outflow)"
@@ -311,15 +436,15 @@ const FinancialSummary = () => {
             trendValue={business_health?.expense_growth_years >= 2 && business_health?.expense_growth_cagr != null
               ? `${formatPercent(Math.abs(expenseGrowth))} CAGR (${business_health.expense_growth_years}Y)`
               : `${formatPercent(Math.abs(expenseGrowth))} growth`}
-            calculation={cashflow_metrics?.calculation?.total_expenses}
+            calculation={operatingProfitCalculation}
           />
           <StatCard
-            title="Net Profit (Surplus)"
-            value={formatCurrency(netProfit)}
-            subtitle={`${formatPercent(profitMargin)} margin`}
+            title="Operating Profit"
+            value={formatCurrency(operatingProfit)}
+            subtitle={`${formatPercent(operatingProfitMargin)} margin`}
             icon={Activity}
-            color={netProfit > 0 ? 'green' : 'red'}
-            calculation={cashflow_metrics?.calculation?.net_surplus}
+            color={operatingProfit > 0 ? 'green' : 'red'}
+            calculation={operatingProfitCalculation}
           />
         </div>
       </div>
@@ -358,20 +483,21 @@ const FinancialSummary = () => {
             calculation={business_health?.calculation?.qoq_revenue_growth}
           />
           <StatCard
-            title="Profit Margin"
-            value={formatPercent(profitMargin)}
+            title="Operating Profit Margin"
+            value={formatPercent(operatingProfitMargin)}
             subtitle="Net profitability"
             icon={PieChart}
-            color={profitMargin > 25 ? 'green' : profitMargin > 15 ? 'blue' : 'orange'}
+            color={operatingProfitMargin > 25 ? 'green' : operatingProfitMargin > 15 ? 'blue' : 'orange'}
           />
         </div>
       </div>
 
       {/* Cashflow & Liquidity */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-between">
           <Activity className="w-6 h-6 mr-2" />
-          Cashflow & Liquidity
+          <span>Cashflow & Liquidity</span>
+          <button onClick={() => setShowExpenseTxns({ type: 'raw_entries', txns: { top_10: data.expense_composition?.top_10_expenses || [], unknown: data.unknown_samples || [] } })} className="text-sm text-blue-600 hover:text-blue-800">Show raw entries</button>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard
@@ -389,8 +515,8 @@ const FinancialSummary = () => {
             calculation={business_health?.calculation?.working_capital_gap}
           />
           <StatCard
-            title="Surplus Ratio"
-            value={formatPercent(cashflow_metrics?.surplus_ratio || 0)}
+            title="Operating Profit Margin (Cashflow)"
+            value={formatPercent(operatingProfitMargin)}
             subtitle="Savings per ₹100 earned"
             color="purple"
           />
@@ -399,9 +525,10 @@ const FinancialSummary = () => {
 
       {/* Debt & Loan Metrics */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-between">
           <DollarSign className="w-6 h-6 mr-2" />
-          Debt & Loan Analysis
+          <span>Debt & Loan Analysis</span>
+          <button onClick={() => setShowExpenseTxns({ type: 'raw_entries', txns: { top_10: data.expense_composition?.top_10_expenses || [], unknown: data.unknown_samples || [] } })} className="text-sm text-blue-600 hover:text-blue-800">Show raw entries</button>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard
@@ -434,9 +561,10 @@ const FinancialSummary = () => {
 
       {/* Expense Breakdown */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-between">
           <PieChart className="w-6 h-6 mr-2" />
-          Expense Composition
+          <span>Expense Composition</span>
+          <button onClick={() => setShowExpenseTxns({ type: 'raw_entries', txns: { top_10: data.expense_composition?.top_10_expenses || [], unknown: data.unknown_samples || [] } })} className="text-sm text-blue-600 hover:text-blue-800">Show raw entries</button>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard
@@ -465,8 +593,11 @@ const FinancialSummary = () => {
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Key Financial Ratios</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
-            <p className="text-sm text-gray-600 font-medium">Profit Margin</p>
-            <p className="text-3xl font-bold text-blue-600">{formatPercent(profitMargin)}</p>
+            <p className="text-sm text-gray-600 font-medium">Operating Profit Margin</p>
+            <p className="text-3xl font-bold text-blue-600">{formatPercent(operatingProfitMargin)}</p>
+          </div>
+          <div className="col-span-2 flex items-center justify-end">
+            <button onClick={() => setShowExpenseTxns({ type: 'raw_entries', txns: { top_10: data.expense_composition?.top_10_expenses || [], unknown: data.unknown_samples || [] } })} className="text-sm text-blue-600 hover:text-blue-800">Show raw entries</button>
           </div>
           <div>
             <p className="text-sm text-gray-600 font-medium">Inflow/Outflow Ratio</p>

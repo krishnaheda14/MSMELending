@@ -93,9 +93,13 @@ def compute_cashflow_metrics(transactions: List[Dict]) -> Dict:
         seasonality_indices.append(si_m)
 
     seasonality_sv = 0.0
+    seasonality_mean = 0.0
+    seasonality_std = 0.0
     try:
         if len(seasonality_indices) > 1 and statistics.mean(seasonality_indices) != 0:
-            seasonality_sv = statistics.pstdev(seasonality_indices) / statistics.mean(seasonality_indices) * 100.0
+            seasonality_mean = statistics.mean(seasonality_indices)
+            seasonality_std = statistics.pstdev(seasonality_indices)
+            seasonality_sv = (seasonality_std / seasonality_mean) * 100.0
     except Exception:
         seasonality_sv = 0.0
 
@@ -155,13 +159,16 @@ def compute_cashflow_metrics(transactions: List[Dict]) -> Dict:
             "seasonality": {
                 "overall_sv_percent": round(seasonality_sv, 2),
                 "by_month_index": seasonality_index_by_month,
+                "mean_seasonality_index": round(seasonality_mean, 4),
+                "std_seasonality_index": round(seasonality_std, 4),
+                "formula": "(Std of monthly indices ÷ Mean of monthly indices) × 100",
                 "rating_table": {
                     "<10": "Very Stable",
                     "10-25": "Mild Seasonality",
                     "25-50": "Moderate Seasonality",
                     ">50": "High Seasonality Risk"
                 },
-                "explanation": "Seasonality SV is coefficient of variation (std/mean) of monthly seasonality indices; lower is more stable."
+                "explanation": f"Seasonality SV is {seasonality_sv:.2f}% computed as coefficient of variation (CV) of monthly seasonality indices. Monthly indices show each month's average revenue relative to overall monthly average ({overall_avg_monthly_rev:,.2f}). Mean index = {seasonality_mean:.4f}, Std = {seasonality_std:.4f}, CV = {seasonality_sv:.2f}%. Lower CV means more consistent revenue across months (less seasonal variation)."
             },
             "income_stability": {
                 "cv_overall_percent": round(income_cv_overall, 2) if income_cv_overall is not None else None,
@@ -330,13 +337,15 @@ def compute_credit_behavior(transactions: List[Dict]) -> Dict:
             except:
                 pass
         
-        # Detect bounces
-        if any(keyword in narration or keyword in description for keyword in ['BOUNCE', 'FAILED', 'REJECT', 'INSUFFICIENT', 'RETURN']):
+        # Detect bounces (expanded patterns)
+        bounce_keywords = ['BOUNCE', 'BOUNCED', 'FAILED', 'FAILURE', 'REJECT', 'REJECTED', 'INSUFFICIENT', 'RETURN', 'RETURNED', 'DISHONOUR', 'DISHONORED']
+        if any(keyword in narration or keyword in description for keyword in bounce_keywords):
             bounces += 1
             failed_transactions.append(txn)
         
-        # Detect EMI payments
-        if 'EMI' in narration or 'EMI' in description:
+        # Detect EMI payments (expanded patterns)
+        emi_keywords = ['EMI', 'E.M.I', 'EQUATED', 'INSTALLMENT', 'INSTALMENT']
+        if any(keyword in narration or keyword in description for keyword in emi_keywords):
             try:
                 amount = abs(float(str(txn.get('amount', 0) or 0).replace(',', '')))
                 date = txn.get('date') or txn.get('transaction_date', '')
@@ -344,13 +353,18 @@ def compute_credit_behavior(transactions: List[Dict]) -> Dict:
             except:
                 pass
         
-        # Detect loan repayments for repayment rate calculation
-        if any(keyword in narration or keyword in description for keyword in ['LOAN', 'REPAYMENT', 'EMI', 'CREDIT CARD']):
+        # Detect loan repayments (expanded patterns including category)
+        loan_keywords = ['LOAN', 'REPAYMENT', 'EMI', 'CREDIT CARD', 'TERM LOAN', 'BUSINESS LOAN', 'PERSONAL LOAN', 'HOME LOAN']
+        category = (txn.get('category') or '').upper()
+        is_loan_repayment = any(keyword in narration or keyword in description for keyword in loan_keywords) or category == 'LOAN_REPAYMENT'
+        
+        if is_loan_repayment:
             try:
                 amount = abs(float(str(txn.get('amount', 0) or 0).replace(',', '')))
                 loan_repayments.append(amount)
                 # Assume on-time if not bounced
-                if not any(keyword in narration or keyword in description for keyword in ['BOUNCE', 'FAILED']):
+                is_bounced = any(keyword in narration or keyword in description for keyword in bounce_keywords)
+                if not is_bounced:
                     on_time_payments += 1
                 else:
                     late_payments += 1
@@ -428,7 +442,10 @@ def compute_credit_behavior(transactions: List[Dict]) -> Dict:
                     "Total Bounced Transactions": bounces,
                     "Failed Transaction Types": "Payment failures, insufficient funds, account issues"
                 },
-                "explanation": f"Detected {bounces} failed/bounced transactions. {'Excellent payment discipline' if bounces == 0 else 'Warning - payment failures indicate cashflow or account management issues' if bounces > 5 else 'Some payment issues detected'}. Each bounce negatively impacts credit score."
+                "explanation": f"Detected {bounces} failed/bounced transactions. {'Excellent payment discipline' if bounces == 0 else 'Warning - payment failures indicate cashflow or account management issues' if bounces > 5 else 'Some payment issues detected'}. Each bounce negatively impacts credit score.",
+                "sample_transactions": {
+                    "failed_transactions": failed_transactions[:10]
+                }
             },
             "emi_consistency_score": {
                 "formula": "100 - (Coefficient of Variation × 100)",
@@ -439,6 +456,10 @@ def compute_credit_behavior(transactions: List[Dict]) -> Dict:
                     "Consistency Score": f"{emi_consistency_score}/100"
                 },
                 "explanation": f"EMI consistency score is {emi_consistency_score}/100 based on {len(emi_transactions)} EMI payments. {'Excellent - very consistent EMI payments' if emi_consistency_score > 90 else 'Good - mostly regular EMI payments' if emi_consistency_score > 70 else 'Concerning - irregular EMI payment amounts'}. Higher scores indicate reliable debt servicing."
+            ,
+                "sample_transactions": {
+                    "emi_transactions": emi_transactions[:10]
+                }
             },
             "emi_variance": {
                 "formula": "Σ(EMI_amount - mean_EMI)² ÷ N",
