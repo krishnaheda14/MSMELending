@@ -1,276 +1,165 @@
-# MSME Lending Solution — Indian Financial Data Lake
+# MSME Lending Platform — Indian Financial Data Lake
 
-## 🎯 Problem Statement
+Compliance-first data tooling for faster, smarter MSME lending decisions.
 
-**Challenge**: Traditional MSME lending in India faces critical barriers:
-- **Manual, paper-heavy credit assessment** leads to weeks-long approval cycles
-- **Single-source bureau scores** (CIBIL) miss 70% of the real financial picture
-- **No unified view** of banking, GST, insurance, mutual funds, ONDC, OCEN data
-- **DPDP Act 2023** mandates explicit per-customer consent — bulk data operations now prohibited
-- **RBI Account Aggregator Framework** requires standardized multi-FIP data fetching
+Why this project:
+- **Faster credit decisions:** combine banking, GST, insurance, mutual funds and marketplace signals into one view.
+- **Consent-first by design:** every request is scoped to a customer ID — no bulk processing, easier auditability.
+- **Actionable insights, not just data:** automated summaries, explainable calculations and lending-ready outputs.
+- **Built for reliability:** synthetic and reproducible data for development, with a clear path to real connector integration.
 
+Top USPs (what makes us different)
+- **Multi-source aggregation**: unified view across disparate Indian financial sources.
+- **Developer-first DX**: drop-in generators, local frontend, and observability for quick demos.
+- **AI-assisted reasoning**: provider-agnostic insight layer with graceful fallbacks.
+- **Modular & auditable**: clear pipelines, JSON schemas, and logs for compliance and traceability.
 
-  - **Live logs with timestamps** — color-coded by severity (error/warning/success/info)
-- **Dataset Viewer** — raw/clean data inspection with limits
+Top features — quick
+- Reproducible synthetic data per customer ID for consistent testing
+- End-to-end pipeline: generate → clean → analyze → score
+- Live debug & dataset viewer for rapid troubleshooting
+- Lightweight API + frontend dashboard for demos and testing
 
-### AI Integration
-- **Deepseek API** (primary) — OpenAI-compatible endpoint
-- **Google Gemini** (fallback) — robust parsing for varied response shapes
-- Automatic fallback if Deepseek fails
-- Token limits enforced (prompt + response configurable via env)
+**Architecture**
+- **Generators**: produce reproducible synthetic `raw/*.ndjson` per customer (connectors for banks, OCEN, ONDC, GST, mutual funds, insurance). Generators live in `generators/` and `scripts/` for focused profiles.
+- **Raw storage**: `raw/` contains original NDJSON exports (or connector outputs) keyed by customer IDs.
+- **Cleaning pipeline**: `pipeline/clean_data.py` and helpers normalize, validate and write canonical records to `clean/`.
+- **Analytics layer**: `analytics/generate_summaries.py` consumes cleaned data and selected raw inputs to produce `analytics/*.json` summaries (credit, GST, transactions, ONDC, OCEN, mutual funds, insurance, anomalies, overall score).
+- **API & UI**: `api_panel/` exposes endpoints to fetch analytics and run pipeline steps; `frontend/` is a demo dashboard.
+- **Observability & logs**: `logs/` contains parsing/cleaning traces and pipeline cache files for auditability.
 
-### Compliance & Security
-- **DPDP Act 2023**: All operations require explicit `customer_id` — no bulk queries
-- **RBI AA Framework**: Simulated consent flow and multi-FIP data aggregation
-- `.gitignore` excludes raw data files (`data_lake/raw/*.ndjson`)
+**Data Flow & Workflow**
+1. Generate (or ingest) raw data: connectors/generators write NDJSON to `raw/*` for a `customer_id`.
+2. Clean: run `python pipeline/clean_data.py --customer-id <id>` to produce standardized records in `clean/*`.
+3. Analyze: run `python analytics/generate_summaries.py --customer-id <id>` to create analytics JSON under `analytics/`.
+4. Review & iterate: inspect `analytics/*_{customer_id}_*.json`, `clean/*`, and `logs/*` using the dataset viewer or CLI for quality checks.
+5. Serve: the `api_panel` reads analytics JSON to return structured responses to the frontend/dashboard.
+
+**Flowchart**
+(Visual: use this mermaid snippet in supported renderers; ASCII fallback included.)
+
+```mermaid
+flowchart LR
+  G[Generators / Connectors] --> R(raw/*.ndjson)
+  R --> C(clean/*.ndjson)
+  C --> A(Analytics Engine)
+  A --> AJ(analytics/*.json)
+  AJ --> API[API Panel]
+  API --> UI[Frontend Dashboard]
+  R --> L[logs/]
+  C --> L
+  A --> L
+```
+
+ASCII fallback:
+
+Generators -> raw/ -> clean/ -> analytics/ -> api_panel -> frontend
+                     \-> logs/ <-/ ^
+
+**Operational Notes**
+- Pipeline steps are idempotent and scoped by `customer_id` for consent-first operation and easy auditing.
+- For demos we use synthetic generators; to move to production, swap generator modules for connector implementations and enable secure keying via `.env`.
+- Some analytics fields are intentionally simulated in demo mode (see `analyze_credit`), while others are computed directly from cleaned raw sources (transactions, GST, ONDC orders, anomalies). Check `analytics/generate_summaries.py` for specifics and `logs/pipeline_cache` for pipeline traces.
 
 ---
 
-## 🚀 Quick Start
+## Standard README (detailed)
 
-### Prerequisites
+### Problem Statement
+
+Traditional MSME lending faces long approval times, fragmented signals, and an urgent need to respect customer consent while aggregating multiple financial sources. This project demonstrates a pragmatic, developer-friendly approach to assembling those signals into lending-ready summaries.
+
+### Quick Start
+
+Prerequisites
 - Python 3.11+
 - Node.js 18+
 - Git
 
-### 1. Clone & Setup Backend
+1. Clone & setup
 ```bash
-cd F:\MSMELending\data_lake
-
-# Install Python dependencies
+cd F:\\MSMELending\\data_lake
 pip install -r requirements.txt
-
-# Create .env file with API keys
-echo "DEEPSEEK_API_KEY=sk-your deepseek key here" > .env
-echo "GEMINI_API_KEY=your_gemini_key_here" >> .env
 ```
 
-### 2. Generate Data for a Customer
+2. Add provider keys to `.env` (use your keys; do not commit secrets)
 ```bash
-# Generate raw data for CUST_MSM_00001
-python generate_all.py --customer-id CUST_MSM_00001
-
-# Clean the data
-python pipeline/clean_data.py --customer-id CUST_MSM_00001
-
-# Generate analytics
-python analytics/generate_summaries.py --customer-id CUST_MSM_00001
-```
-
-### 3. Start Backend API
-```bash
-cd api_panel
-python app.py
-```
-Backend runs at `http://localhost:5000`
-
-### 4. Start Frontend
-```bash
-cd ../frontend
-npm install
-npm start
-```
-Frontend runs at `http://localhost:3000`
-
-### 5. Open Dashboard
-- Navigate to `http://localhost:3000`
-- Enter customer ID (e.g., `CUST_MSM_00001`) and press **Enter** or click "Load Analytics"
-- Click "Get AI Insights" for lending recommendation
-- Explore Methodology and Calculations tabs
-
----
-
-## 📖 Usage Guide
-
-### Generate Data for Multiple Customers
-
-**Option 1: Via Pipeline Monitor UI (Recommended)**
-1. Open `http://localhost:3000` → go to **Pipeline Monitor** tab
-2. Click **"Generate Random Customer ID"** button (green section at top)
-3. A new random customer ID will be assigned (e.g., `CUST_MSM_47832`)
-4. Click pipeline steps in order to generate data for that customer:
-   - Step 1: Validate Consent & Fetch Data
-   - Step 2: Clean & Validate Data
-   - Step 3: Generate Analytics & Insights
-   - Step 4: Calculate Credit Score
-5. **Debug panel** shows real-time execution status and current command being run
-6. Repeat to add more customers to your data pool
-
-**Option 2: Via Command Line**
-```bash
-# Customer 1
-python generate_all.py --customer-id CUST_MSM_00001
-python pipeline/clean_data.py --customer-id CUST_MSM_00001
-python analytics/generate_summaries.py --customer-id CUST_MSM_00001
-
-# Customer 2 (will have different random seed → unique data)
-python generate_all.py --customer-id CUST_MSM_00002
-python pipeline/clean_data.py --customer-id CUST_MSM_00002
-python analytics/generate_summaries.py --customer-id CUST_MSM_00002
-```
-
-**Note**: Each `customer_id` is hashed to seed the random number generator, ensuring reproducible yet distinct data per customer.
-
-### Run Full Pipeline via UI
-1. Open `http://localhost:3000`
-2. Go to **Pipeline Monitor** tab
-3. Enter customer ID (required)
-4. Click pipeline steps in order:
-   - Step 1: Generate Data
-   - Step 2: Clean Data
-   - Step 3: Generate Analytics
-   - Step 4: Calculate Credit Score
-
-### Debug Data Issues
-- Use **Show Debug** button in GST & Business Insights section to inspect raw data structure
-- Check `logs/` directory for validation errors and cleaning logs
-- Inspect `raw/` vs `clean/` NDJSON files in Dataset Viewer tab
-
----
-
-## 🧪 Testing & Verification
-
-### Test Credit Score Calculation
-```bash
-curl -X POST http://localhost:5000/api/pipeline/calculate_score \
-  -H "Content-Type: application/json" \
-  -d '{"customer_id":"CUST_MSM_00001"}'
-```
-
-### Test Analytics Endpoint
-```bash
-curl "http://localhost:5000/api/analytics?customer_id=CUST_MSM_00001"
-```
-
-### Test AI Insights
-```bash
-curl -X POST http://localhost:5000/api/ai-insights \
-  -H "Content-Type: application/json" \
-  -d '{"customer_id":"CUST_MSM_00001"}'
-```
-
----
-
-## 📂 Project Structure
-
-```
-MSMELending/
-├── data_lake/
-│   ├── generators/              # Synthetic data generators
-│   │   ├── generate_banking_data.py
-│   │   ├── generate_additional_data.py  (GST, Credit Bureau)
-│   │   ├── generate_insurance_mf.py
-│   │   ├── generate_ondc_ocen.py
-│   │   └── indian_data_utils.py
-│   ├── pipeline/
-│   │   └── clean_data.py        # Data cleaning & validation
-│   ├── analytics/
-│   │   └── generate_summaries.py  # Analytics engine
-│   ├── api_panel/
-│   │   └── app.py               # Flask API + SocketIO
-│   ├── frontend/
-│   │   └── src/
-│   │       ├── components/
-│   │       │   ├── AnalyticsInsights.js  (main dashboard)
-│   │       │   ├── CreditMethodology.js  (explainability doc)
-│   │       │   ├── CreditCalculations.js (numeric examples)
-│   │       │   ├── PipelineMonitor.js
-│   │       │   ├── DatasetViewer.js
-│   │       │   └── Sidebar.js
-│   │       └── App.js
-│   ├── schemas/                 # JSON schemas for validation
-│   ├── docs/                    # Documentation
-│   ├── raw/                     # Raw NDJSON data (gitignored)
-│   ├── clean/                   # Cleaned NDJSON data (gitignored)
-│   ├── analytics/               # Analytics JSON summaries (gitignored)
-│   ├── logs/                    # Validation error logs (gitignored)
-│   ├── config.json              # Generation config
-│   ├── generate_all.py          # Master generator orchestrator
-│   ├── requirements.txt
-│   └── README.md
-└── README.md                    # This file
-```
-
----
-
-## 🔧 Configuration
-
-### Scale Settings (`config.json`)
-```json
-{
-  "scale": {
-    "users": 10000,
-    "bank_accounts": 15000,
-    "transactions": 50000
-  },
-  "messiness_config": {
-    "date_format_variation": true,
-    "numeric_format_inconsistency": true,
-    "missing_field_probability": 0.05,
-    "duplicate_probability": 0.02
-  }
-}
-```
-
-### AI Provider Keys (`.env`)
-```bash
-DEEPSEEK_API_KEY=sk-553a2062a03e4a88aec97575bd25d268
-GEMINI_API_KEY=your_gemini_key_here
+DEEPSEEK_API_KEY=your_deepseek_key
+GEMINI_API_KEY=your_gemini_key
 MAX_AI_PROMPT_TOKENS=1500
 MAX_AI_RESPONSE_TOKENS=1500
 ```
 
----
+3. Generate, clean, and analyze for a customer
+```bash
+python generate_all.py --customer-id CUST_MSM_00001
+python pipeline/clean_data.py --customer-id CUST_MSM_00001
+python analytics/generate_summaries.py --customer-id CUST_MSM_00001
+```
 
-## 🚧 Known Limitations & Future Enhancements
+4. Run the API
+```bash
+cd api_panel
+python app.py
+# Backend default: http://localhost:5000
+```
 
-### Current Limitations
-1. **Anomaly detection** is rule-based (1st-pass logic) — not ML-based
-2. **GST/OCEN/MF/Insurance** analyzers have partial `calculation` metadata parity (transactions/credit/ONDC fully implemented)
-3. **AI insights** subject to provider token limits (may truncate context for large datasets)
+5. Start the frontend
+```bash
+cd frontend
+npm install
+npm start
+# Frontend default: http://localhost:3000
+```
 
-### Planned Enhancements
-- ML-based anomaly detection (isolation forest, autoencoders)
-- Richer calculation metadata across all analyzers
-- Real AA integration (currently simulated)
-- Time-series forecasting for cashflow prediction
-- Interactive risk matrix charts
+### Usage guide
 
----
+Pipeline Monitor (recommended): use the UI to create a customer ID and run the four pipeline steps in order: generate → clean → analytics → score. For automated workflows, the same steps are available via CLI scripts.
 
-## 📚 Documentation
+Debugging
+- Use the dataset viewer to compare `raw/` vs `clean/` files.
+- Check `logs/` for validation and cleaning records.
 
-- **[CUSTOMER_LENDING_FLOW.md](docs/CUSTOMER_LENDING_FLOW.md)** — detailed lending journey walkthrough
-- **[data_dictionary.md](docs/data_dictionary.md)** — field-level data documentation
-- **[FLOW.md](FLOW.md)** — pipeline execution flow diagram
+### Testing
 
----
+Example API checks
+```bash
+curl -X POST http://localhost:5000/api/pipeline/calculate_score \\
+  -H "Content-Type: application/json" \\
+  -d '{"customer_id":"CUST_MSM_00001"}'
 
-## 🤝 Contributing
-
-This is a demo/prototype project. For production use:
-1. Replace synthetic data generators with real AA connectors
-2. Implement proper authentication & authorization
-3. Add audit trails and compliance logging
-4. Deploy backend/frontend with HTTPS
-5. Set up database for persistent storage (currently file-based)
-
----
-
-## 📄 License
-
-MIT License — Free to use for educational and commercial purposes.
-
----
-
-## 🙏 Acknowledgments
-
-Built with adherence to:
-- **RBI Account Aggregator Framework** (Master Directions)
-- **Digital Personal Data Protection Act (DPDP) 2023**
-- **GSTN API** specifications
-- **ONDC Beckn Protocol** standards
+curl "http://localhost:5000/api/analytics?customer_id=CUST_MSM_00001"
+```
 
 ---
 
-**For questions or support**: Open an issue on GitHub or contact the maintainers.
+### Project layout
+
+See the `data_lake` folder for generators, pipeline, analytics, API and frontend modules. The repo is organized for quick demos and iterative development.
+
+### Configuration
+
+Edit `config.json` to control scale and noise in generated data. Use `.env` for keys — never commit credentials.
+
+### Known limitations & roadmap
+
+Current
+- Rule-based anomaly detection (first-pass)
+- Partial parity in calculation metadata across some analyzers
+
+Planned
+- ML-based anomaly detection
+- Full calculation metadata parity
+- Real Account Aggregator integration
+
+---
+
+## Contributing
+
+This is a demonstration-grade project. For production, replace synthetic connectors with real connectors, add authentication, audit trails, and deploy with secure infrastructure.
+
+---
+
+License: MIT
+
+For questions or support, open an issue or contact the maintainers.

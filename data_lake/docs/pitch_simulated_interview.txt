@@ -1,0 +1,142 @@
+Pitch: MSME Profile & Decisioning Platform — Simulated Founder Interview
+
+Elevator pitch
+We convert fragmented MSME digital traces (bank transactions, GST returns, credit reports, mutual funds, insurance, OCEN, ONDC) into compact, auditable customer profiles and explainable risk/affordability scores that lenders can use to underwrite, price and monitor thin-file borrowers faster and with fewer manual reviews.
+
+One-line value prop
+Explainable debt capacity + cashflow signals for MSMEs, enabling higher coverage and safer portfolio expansion.
+
+Data & schema (what we store and why)
+- Sources: bank transactions, GST returns, credit bureau extracts, mutual fund holdings, insurance policies, OCEN applications, ONDC orders, plus any CSV/API feeds.
+- Normalization: canonical `customer_id`, `generated_at` timestamp, `_numeric_amount` normalization, merchant/category mapping, GSTIN→state mapping, dataset presence counters.
+- Per-customer outputs (examples in `analytics/`):
+  - `overall_summary.json`: dataset counts, composite scores, debt_capacity_breakdown, business_health contributors, recommendation.
+  - `transaction_summary.json`: totals, by_type breakdown, unknown narrations, monthly_cashflow, amounts_stats.
+  - `earnings_spendings.json`: cashflow metrics, seasonality, top_customers exposure.
+  - `gst_summary.json`: monthly_turnover, by_state, mapping_debug, compliance_score.
+  - `credit_summary.json`: bureau_score, open_loans, utilization, payment_history.
+  - `anomalies_report.json`: anomaly types, top_transactions, fraud flag.
+
+Architecture & pipeline (founder-focused)
+- Ingestion: connectors (sFTP/APIs/CSV) into staging.
+- ETL/Normalization: parse dates/amounts, map narratives to merchants/categories, deduplicate across accounts.
+- Enrichment: merge bureau and platform data, merchant & industry lookup.
+- Storage: append-only raw store + compact per-customer JSON summaries (analytics) + timeseries in columnar store.
+- Scoring: rule-based components + lightweight ML; each score carries provenance and text explanations.
+- Interfaces: REST API, batch exports, analyst UI, webhook integrations for lenders.
+
+Core analytics & models
+- Normalizers: regex/heuristics + dictionary + ML entity extraction for narrations.
+- Cashflow stability: coefficient of variation and percent-with-amount over rolling windows.
+- Business health: GST compliance, revenue scale, provider diversity, investments.
+- Debt capacity: structured composite (base_floor + credit_component + repayment_bonus + DTI + OCEN + insurance + regularity), with `debt_capacity_breakdown` showing numeric contributions.
+- Anomaly detection: rule thresholds + unsupervised clustering for outliers.
+- Explainability: `calculation` and `mapping_debug` objects in outputs.
+
+Product outputs & integrations
+- Per-customer JSON packages, batch CSVs, decisioning API returning scores + rationale.
+- Dashboard: customer timeline, score breakdown, anomaly drilldown, manual override with audit trail.
+- Alerts & streaming: near-real-time for high-severity anomalies and OCEN approvals.
+
+Operations & infra
+- Pilot footprint: cloud storage, containerized ETL workers, Postgres + timeseries store, API service.
+- Scale considerations: keep per-profile JSONs small; move heavy timeseries to columnar DB; autoscale ingestion workers.
+- SLAs: daily profile refresh (default), minutes for critical alerts; uptime SLAs for API endpoints.
+
+Security & compliance
+- Encrypt data at rest/in transit, RBAC, consent capture and storage, audit logs and lineage for each derived score, support for deletion requests and legal holds.
+
+Business model & GTM
+- Customers: banks, NBFCs, digital lenders, underwriting platforms.
+- Pricing: subscription per-profile + per-decision API fees or revenue share.
+- GTM: pilot with regional NBFCs → case studies → enterprise sales.
+
+KPIs to measure in pilots
+- Coverage (% profiles produced), approval uplift for thin-file segments, manual review reduction, NPL change, time-to-decision, ARPU.
+
+Roadmap (12 months)
+- Q1: Harden ingestion, mapping, per-customer APIs, 1–2 pilots.
+- Q2: Add streaming for critical signals, OCEN integration, UI for lenders.
+- Q3: Supervised models trained with pilot labels; risk-pricing prototype.
+- Q4: Enterprise features (SLA, multi-tenant security), partner integrations.
+
+Simulated Interview — Likely Founder Questions and Expected Answers
+
+Product & value
+Q: What exact problem are we solving and for whom?
+A: We enable lenders to underwrite MSMEs with limited credit history by producing explainable affordability and risk signals from multiple data sources, reducing manual reviews and expanding addressable customers.
+
+Q: Top three lender KPIs this improves?
+A: Approval uplift for thin-file customers, manual review cost reduction, and portfolio default reduction.
+
+Q: How do we differ from bureau reports?
+A: We fuse bureau with cashflow, GST, and platform signals to estimate real-time affordability and detect operational anomalies; plus we provide controllable, auditable provenance for each score.
+
+Data & quality
+Q: What if GST or bank data is missing for a customer?
+A: Profiles are additive and confidence-scored; debt capacity uses conservative defaults and marks low-confidence components for manual review to avoid over-optimistic approvals.
+
+Q: How do you normalize messy narrations and dates?
+A: Layered processing: heuristics + merchant dictionaries + ML entity extraction; mapping_debug tracks applied rules and versions.
+
+Q: How to deduplicate multiple accounts or repeated transactions?
+A: Transaction fingerprinting (date+amount+narration hash) and account clustering heuristics; duplicates are collapsed when aggregating cashflows.
+
+Models & explainability
+Q: Is debt_capacity a black box?
+A: No — it is a compositional score with explicit numeric components and text explanations; each number is traceable to raw inputs via calculation_debug.
+
+Q: How to validate without ground truth?
+A: Use proxy signals (bureau late-payment flags), pilot labels, backtests on historical data, and conservative production thresholds; iterate with lender feedback.
+
+Engineering & infra
+Q: Minimum infra for a pilot?
+A: Object storage, a small containerized ETL worker cluster, a Postgres/timeseries DB, and a stateless API — deployable in a cloud tenant or customer VPC.
+
+Q: How do we scale to millions of profiles?
+A: Keep per-profile JSONs small; store long timeseries in a columnar store; shard ingestion; use caches for hot profiles.
+
+Security & compliance
+Q: How do you handle PII and consent?
+A: Capture consent upstream, encrypt PII, store minimal PII downstream, and maintain audit trail for data lineage and deletion requests.
+
+Business & go-to-market
+Q: Who pays and what pricing?
+A: Lenders typically pay. Offer subscription per-profile + per-decision fees; pilot discounts and outcome-based pricing for early partners.
+
+Q: How fast to show ROI in pilots?
+A: Expect measurable improvements in 3 months for manual review reduction; stable default/approval signals need 6–12 months for robust validation.
+
+Deep technical probes
+Q: Show lineage for a score.
+A: Provide calculation_debug: source datasets, raw input values, intermediate components, weights and final aggregation; reproducible from stored raw data.
+
+Q: How to prevent gaming?
+A: Cross-source triangulation (GST vs bank vs platform), anomaly detection for synthetic/structured gaming patterns, and conservative thresholds until validated.
+
+Q: What data contracts are required?
+A: Contracts must cover allowed use, retention windows, security standards, breach obligations, and rules about sharing derived outputs.
+
+Appendix — Are we missing any data sources or product features?
+Missing or high-value additional data sources:
+- GST e-invoice / ewaybill feeds (higher fidelity invoicing and counterparty data).
+- Marketplaces & payment gateway settlements (Amazon Seller, Razorpay, PayU) for transaction-level merchant sales.
+- Accounting software exports (Tally, QuickBooks, Zoho Books) for ledger-level P&L and inventory details.
+- POS or invoicing platforms for retail MSMEs.
+- Supplier/payables data and purchase orders (supply-side cashflow visibility).
+- Udyam / business registration and MSME registry metadata.
+- Telecom/utility/land records (alternative signals for stability).
+
+Recommended product features to add:
+- Decisioning & risk-pricing engine (auto-calibrated PD -> price recommendations).
+- Model governance: training/validation pipelines, drift detection, A/B testing harness.
+- Consent & consent lifecycle management UI and APIs.
+- Analyst workflow + dispute resolution UI for flag reviews and corrections.
+- Label collection pipeline (for supervised models) and lender feedback loops.
+- SLA & multi-tenant security layer for enterprise customers.
+- Sandbox for lenders to simulate rule changes and see cohort impacts.
+
+File saved here (local workspace): docs/pitch_simulated_interview.txt
+
+Notes
+- This file was created locally and not pushed to GitHub per your instructions.
