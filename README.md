@@ -9,7 +9,11 @@
 - DPDP Act 2023 mandates explicit per-customer consent — bulk data operations prohibited
 - RBI Account Aggregator Framework requires standardized multi-FIP data fetching
 
-
+**Business Impact**:
+- 50+ day average loan turnaround for MSMEs
+- 40% rejection rate due to incomplete financial visibility
+- Manual underwriting prone to bias and errors
+- Cannot scale to millions of MSME borrowers
 
 ---
 
@@ -39,7 +43,11 @@ A comprehensive MSME credit decisioning platform leveraging:
     - DTI Impact (0-5 points): Lower debt-to-income = better capacity
     - OCEN Approval (0-3 points): Loan application approval rate
     - Payment Regularity (0-2 points): Consistent payment history
-
+- **Enhanced Detection Patterns**:
+  - 11 bounce keywords: BOUNCE, BOUNCED, FAILED, FAILURE, REJECT, REJECTED, INSUFFICIENT, RETURN, RETURNED, DISHONOUR, DISHONORED
+  - 5 EMI keywords: EMI, E.M.I, EQUATED, INSTALLMENT, INSTALMENT
+  - 8+ loan keywords: LOAN, TERM LOAN, BUSINESS LOAN, PERSONAL LOAN, HOME LOAN, etc.
+  - Category-based detection: LOAN_REPAYMENT category automatically flagged
 
 ### 3. Explainable AI & Transparency
 - **Interactive Metric Exploration**: Click any ℹ️ button to see:
@@ -56,7 +64,11 @@ A comprehensive MSME credit decisioning platform leveraging:
   - Simple arithmetic demonstrating score derivation
   - Component-wise contribution to final score
 - **Debug Panels**: Collapsible raw data inspectors in charts
-
+- **Sample Transaction Modals**: 
+  - Top 10 expense transactions with amounts and dates
+  - Failed/bounced transactions for credit analysis
+  - EMI transactions for debt service calculations
+  - Unknown/uncategorized transactions for manual review
 
 ### 4. Pre-loaded Demo Datasets for Quick Demonstration
 - 10 customer profiles with varying risk levels and specialized behaviors
@@ -122,9 +134,8 @@ Lending Decision (Approve / Review / Reject)
                      ▼
 ┌──────────────────────────────────────────────────────┐
 │  Frontend Dashboard                                  │
-│  • Analytics & AI Insights (Dataset Insights)        │
-│  • Financial Summary & P&L Statement                 |
-|  • Detailed Metrics (Metrics assessment)             |
+│  • Lending Analytics & AI Insights (main view)       │
+│  • Earnings vs Spendings (detailed financial health) │
 │  • Credit Methodology (explainability doc)           │
 │  • Credit Calculations (numeric examples)            │
 │  • Pipeline Monitor (real-time progress)             │
@@ -253,34 +264,33 @@ The application features 11 comprehensive tabs for complete financial analysis:
 
 ---
 
+## � Screenshots
 
-## 📸 Screenshots
-
-Below are actual screenshots from the MSME Lending Dashboard. All images are stored in [`docs/screenshots/`](docs/screenshots/).
+> **Note**: Screenshots are stored in [`docs/screenshots/`](docs/screenshots/) directory. Add your images there and reference them below.
 
 ### Dashboard Overview
-![Dashboard](docs/screenshots/dashboard.png)
+<!-- ![Dashboard Overview](docs/screenshots/dashboard-overview.png) -->
+*Coming soon: Main dashboard with credit score and analytics*
 
-### Financial Summary
-![Financial Summary](docs/screenshots/financialsummary.png)
-
-### Detailed Metrics
-![Detailed Metrics](docs/screenshots/detailedmetrics.png)
-
-### Credit Scoring
-![Credit Scoring](docs/screenshots/creditscoring.png)
-
-### Credit Calculations
-![Credit Calculations](docs/screenshots/creditcalculations.png)
+### Analytics & Insights
+<!-- ![Analytics View](docs/screenshots/analytics-insights.png) -->
+*Coming soon: Detailed financial metrics and AI recommendations*
 
 ### Pipeline Monitor
-![Pipeline](docs/screenshots/pipeline.png)
+<!-- ![Pipeline Monitor](docs/screenshots/pipeline-monitor.png) -->
+*Coming soon: Real-time data generation and processing*
 
-> To update or add more screenshots: place your image in `docs/screenshots/` and add a markdown image tag here.
+### Credit Calculations
+<!-- ![Credit Calculations](docs/screenshots/credit-calculations.png) -->
+*Coming soon: Step-by-step credit score breakdown*
+
+> **To add screenshots**: 
+> 1. Place image files in `docs/screenshots/` directory
+> 2. Uncomment the relevant line above and update the filename
+> 3. Use format: `![Description](docs/screenshots/your-image.png)`
 
 ---
 
-## �🚀 Quick Start
 
 ### Prerequisites
 - Python 3.11+
@@ -405,14 +415,13 @@ The system includes 10 pre-configured customer profiles, each demonstrating a di
 
 
 
-## �📖 Usage Guide
 
 ### Generate Data for Multiple Customers
 
 **Option 1: Via Pipeline Monitor UI (Recommended)**
 1. Open `http://localhost:3000` → go to **Pipeline Monitor** tab
-
-4. Click pipeline steps in order to create insights for that customer:
+3. A new random customer ID will be assigned (e.g., `CUST_MSM_47832`)
+4. Click pipeline steps in order to generate data for that customer:
    - Step 1: Validate Consent & Fetch Data
    - Step 2: Clean & Validate Data
    - Step 3: Generate Analytics & Insights
@@ -608,4 +617,3 @@ Built with adherence to:
 ---
 
 **Built for the future of MSME lending in India. 🚀**
-
