@@ -460,6 +460,51 @@ def pipeline_state():
     return jsonify({'customer_id': customer_id, 'cache': cache, 'raw_present': raw_present})
 
 
+@app.route('/api/request-consent', methods=['POST'])
+def request_consent():
+    """Simulate user consent approval and return a success token."""
+    print("\n[REQUEST] POST /api/request-consent")
+    payload = request.get_json(silent=True) or {}
+    customer_id = payload.get('customer_id') or request.args.get('customer_id')
+    if not customer_id:
+        print("  [ERROR] Missing customer_id")
+        return jsonify({'error': 'customer_id required'}), 400
+    
+    # Generate consent token
+    import time
+    token = f"CONSENT-{customer_id}-{int(time.time() * 1000)}"
+    
+    # Store token in pipeline cache
+    state = load_pipeline_cache(customer_id)
+    state['consent_token'] = token
+    state['consent_status'] = 'APPROVED'
+    state['consent_timestamp'] = datetime.utcnow().isoformat() + 'Z'
+    save_pipeline_cache(customer_id, state)
+    
+    # Log to terminal and socketio
+    print(f"  [CONSENT] ✓ APPROVED for {customer_id}")
+    print(f"  [TOKEN] {token}")
+    socketio.emit('pipeline_log', {
+        'level': 'success',
+        'message': f'Consent APPROVED for {customer_id}',
+        'timestamp': str(datetime.utcnow())
+    })
+    socketio.emit('pipeline_log', {
+        'level': 'info',
+        'message': f'Token: {token}',
+        'timestamp': str(datetime.utcnow())
+    })
+    append_cache_log(customer_id, 'success', f'Consent APPROVED for {customer_id}')
+    append_cache_log(customer_id, 'info', f'Token: {token}')
+    
+    return jsonify({
+        'status': 'success',
+        'token': token,
+        'customer_id': customer_id,
+        'message': 'Consent approved successfully'
+    }), 200
+
+
 @app.route('/api/pipeline/clean', methods=['POST'])
 def run_clean():
     """Start data cleaning pipeline."""
@@ -570,9 +615,27 @@ def run_analytics():
     # Enforce per-customer execution
     payload = request.get_json(silent=True) or {}
     customer_id = payload.get('customer_id') or request.args.get('customer_id')
+    token = payload.get('token') or request.args.get('token')
+    
     if not customer_id:
         print("  [SECURITY] Rejecting analytics pipeline call without customer_id")
         return jsonify({'error': 'Analytics must be requested per-customer. Provide customer_id.'}), 400
+    
+    # Verify consent token if provided
+    if token:
+        cache = load_pipeline_cache(customer_id)
+        stored_token = cache.get('consent_token')
+        consent_status = cache.get('consent_status')
+        
+        if stored_token != token:
+            print(f"  [SECURITY] Invalid token for {customer_id}")
+            return jsonify({'error': 'Invalid consent token'}), 403
+        
+        if consent_status != 'APPROVED':
+            print(f"  [SECURITY] Consent not approved for {customer_id}")
+            return jsonify({'error': 'Consent not approved'}), 403
+        
+        print(f"  [CONSENT] ✓ Token verified for {customer_id}")
     
     def run_analytics_gen():
         print("  [DEBUG] Analytics thread started")
@@ -746,6 +809,48 @@ def get_analytics():
     print(f"      - OCEN: {ocen_raw.get('total_applications', 0)}")
     print(f"      - ONDC: {ondc_raw.get('total_orders', 0)}")
     return jsonify(normalized)
+
+
+@app.route('/api/customer-profile')
+def get_customer_profile():
+    """Get complete customer profile with all available data sources."""
+    customer_id = request.args.get('customer_id', 'CUST_MSM_00001')
+    print(f"\n[REQUEST] GET /api/customer-profile?customer_id={customer_id}")
+    
+    analytics_files = {
+        'overall': f'{customer_id}_overall_summary.json',
+        'transactions': f'{customer_id}_transaction_summary.json',
+        'gst': f'{customer_id}_gst_summary.json',
+        'credit': f'{customer_id}_credit_summary.json',
+        'anomalies': f'{customer_id}_anomalies_report.json',
+        'mutual_funds': f'{customer_id}_mutual_funds_summary.json',
+        'insurance': f'{customer_id}_insurance_summary.json',
+        'ocen': f'{customer_id}_ocen_summary.json',
+        'ondc': f'{customer_id}_ondc_summary.json',
+        'earnings_spendings': f'{customer_id}_earnings_spendings.json'
+    }
+    
+    profile_data = {
+        'customer_id': customer_id,
+        'loaded_at': datetime.utcnow().isoformat() + 'Z',
+        'data_sources': {}
+    }
+
+    for key, filename in analytics_files.items():
+        filepath = os.path.join(ANALYTICS_DIR, filename)
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                profile_data['data_sources'][key] = json.load(f)
+            print(f"  [✓] Loaded {filename}")
+        except FileNotFoundError:
+            print(f"  [!] File not found: {filename}")
+            profile_data['data_sources'][key] = None
+        except Exception as e:
+            print(f"  [ERROR] Failed to load {filename}: {str(e)}")
+            profile_data['data_sources'][key] = {'error': str(e)}
+
+    print(f"  [✓] Customer profile loaded for {customer_id}")
+    return jsonify(profile_data)
 
 
 @app.route('/api/earnings-spendings')

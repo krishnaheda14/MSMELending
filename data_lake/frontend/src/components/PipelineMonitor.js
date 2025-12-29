@@ -6,6 +6,7 @@ import io from 'socket.io-client';
 const PipelineMonitor = () => {
   const [customerId, setCustomerId] = useState('CUST_MSM_00001'); // Customer ID input
   const [consentGranted, setConsentGranted] = useState(false);
+  const [consentToken, setConsentToken] = useState(null);
   const [dataFetched, setDataFetched] = useState(false);
   const [debugMinimized, setDebugMinimized] = useState(false);
   const [currentExecution, setCurrentExecution] = useState({ step: null, command: null, status: 'idle' });
@@ -241,7 +242,15 @@ const PipelineMonitor = () => {
       }
       
       addLog(`Starting ${stepName} for customer ${customerId}...`, 'info');
-      const response = await axios.post(`/api/pipeline/${stepName}`, { customer_id: customerId });
+      
+      // Include token for analytics if available
+      const payload = { customer_id: customerId };
+      if (stepName === 'analytics' && consentToken) {
+        payload.token = consentToken;
+        addLog(`Using consent token: ${consentToken}`, 'info');
+      }
+      
+      const response = await axios.post(`/api/pipeline/${stepName}`, payload);
       addLog(response.data.message || `✓ ${stepName} completed successfully`, 'success');
       
       // Update to completed
@@ -492,6 +501,15 @@ const PipelineMonitor = () => {
             <Play className="w-5 h-5" />
             <span>{consentGranted ? '✓ Consent Validated & Data Fetched' : 'Step 0: Validate Consent & Fetch Data (Simulated)'}</span>
           </button>
+          {consentToken && (
+            <div className="w-full px-4 py-2 bg-green-50 border border-green-300 text-green-800 rounded-lg flex items-center gap-2 text-sm">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="flex-1 overflow-hidden">
+                <span className="font-semibold">Consent Token:</span>
+                <span className="ml-2 font-mono text-xs break-all">{consentToken}</span>
+              </div>
+            </div>
+          )}
           <button
             onClick={() => startPipeline('clean')}
             disabled={pipeline.status === 'running' || !customerId || !dataFetched || pipeline.steps[1].status === 'completed'}

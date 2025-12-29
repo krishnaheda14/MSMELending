@@ -16,8 +16,10 @@ This folder contains screenshots of the MSME Lending application for documentati
 - GIF for animated demonstrations
 
 ## Naming Convention
-Use descriptive kebab-case names:
-- `dashboard-overview.png`
-- `credit-score-breakdown.png`
-- `pipeline-monitor.png`
-- `analytics-insights.png`
+Use descriptive names (kebab-case or simple words). Current examples in this repo:
+- `dashboard.png`
+- `detailedmetrics.png`
+- `creditscoring.png`
+- `creditcalculations.png`
+- `financialsummary.png`
+- `pipeline.png`

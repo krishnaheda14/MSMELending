@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Activity, Terminal, Database, FileText, Trash2, BarChart3, BookOpen, Calculator, TrendingUp, DollarSign, FileSpreadsheet } from 'lucide-react';
+import { Home, Activity, Terminal, Database, FileText, Trash2, BarChart3, BookOpen, Calculator, TrendingUp, DollarSign, FileSpreadsheet, User } from 'lucide-react';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
@@ -9,6 +9,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/', icon: Home, label: 'Dashboard' },
     { path: '/pipeline', icon: Activity, label: 'Pipeline Monitor' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics & Insights' },
+    { path: '/customer-profile', icon: User, label: 'Customer Profile' },
     { path: '/financial-summary', icon: DollarSign, label: 'Financial Summary (P&L)' },
     { path: '/detailed-metrics', icon: FileSpreadsheet, label: 'Detailed Metrics' },
     { path: '/methodology', icon: BookOpen, label: 'Credit Methodology' },

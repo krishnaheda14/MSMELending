@@ -690,6 +690,166 @@
       "timestamp": "2025-12-13T20:37:11.743792Z",
       "level": "info",
       "message": "Analytics files in: F:\\MSMELending\\data_lake\\analytics"
+    },
+    {
+      "timestamp": "2025-12-29T10:26:29.584022Z",
+      "level": "success",
+      "message": "Consent APPROVED for CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:26:29.625169Z",
+      "level": "info",
+      "message": "Token: CONSENT-CUST_MSM_00001-1767003989502"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:20.552823Z",
+      "level": "info",
+      "message": "Starting analytics generation pipeline..."
+    },
+    {
+      "timestamp": "2025-12-29T10:27:20.743244Z",
+      "level": "info",
+      "message": "Executing: python analytics/generate_summaries.py"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:21.221368Z",
+      "level": "info",
+      "message": "[INFO] Starting comprehensive analytics generation for customer=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:21.273497Z",
+      "level": "info",
+      "message": "[INFO] Loading data from F:\\MSMELending\\data_lake\\raw..."
+    },
+    {
+      "timestamp": "2025-12-29T10:27:21.334674Z",
+      "level": "info",
+      "message": "[INFO] Using transactions file: F:\\MSMELending\\data_lake\\raw\\raw_transactions_with_customer_id.ndjson"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:21.811319Z",
+      "level": "info",
+      "message": "[INFO] Using GST file: F:\\MSMELending\\data_lake\\raw\\raw_gst.ndjson"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:21.954206Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=67689 filtered=17409 for customer=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.009423Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=564 filtered=36 for customer=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.073104Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=851 filtered=1 for customer=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.119807Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=13 filtered=1 for customer=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.166416Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=25 filtered=1 for customer=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.230674Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=5 filtered=0 for customer=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.292291Z",
+      "level": "info",
+      "message": "[DEBUG] _filter_by_customer: original=809 filtered=1 for customer=CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.355304Z",
+      "level": "info",
+      "message": "[INFO] GST records loaded: 36 (limit=5000, rate=0.0)"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.420073Z",
+      "level": "info",
+      "message": "[INFO] Generating analytics..."
+    },
+    {
+      "timestamp": "2025-12-29T10:27:22.481905Z",
+      "level": "info",
+      "message": "[INFO] Computing advanced financial metrics..."
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.167234Z",
+      "level": "info",
+      "message": "[ERROR] Analytics generation failed: '<' not supported between instances of 'NoneType' and 'str'"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.225742Z",
+      "level": "info",
+      "message": "Traceback (most recent call last):"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.288913Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\generate_summaries.py\", line 1311, in <module>"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.353639Z",
+      "level": "info",
+      "message": "    main()"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.414673Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\generate_summaries.py\", line 765, in main"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.477352Z",
+      "level": "info",
+      "message": "    business_health = compute_business_health_metrics(gst_summary, transactions, ondc_summary)"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.541394Z",
+      "level": "info",
+      "message": "                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.602649Z",
+      "level": "info",
+      "message": "  File \"F:\\MSMELending\\data_lake\\analytics\\financial_metrics.py\", line 618, in compute_business_health_metrics"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.666015Z",
+      "level": "info",
+      "message": "    revenue_monthly = dict(sorted(monthly_credits.items()))"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.730300Z",
+      "level": "info",
+      "message": "                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:24.791169Z",
+      "level": "info",
+      "message": "TypeError: '<' not supported between instances of 'NoneType' and 'str'"
+    },
+    {
+      "timestamp": "2025-12-29T10:27:25.013395Z",
+      "level": "error",
+      "message": "Analytics failed with code 2"
+    },
+    {
+      "timestamp": "2025-12-29T10:28:58.925903Z",
+      "level": "success",
+      "message": "Consent APPROVED for CUST_MSM_00001"
+    },
+    {
+      "timestamp": "2025-12-29T10:28:58.971337Z",
+      "level": "info",
+      "message": "Token: CONSENT-CUST_MSM_00001-1767004138879"
     }
   ],
   "steps": {
@@ -700,10 +860,13 @@
     },
     "3": {
       "step": "analytics",
-      "progress": 100,
-      "status": "completed"
+      "progress": 0,
+      "status": "failed"
     }
   },
   "pipelineStatus": "idle",
-  "last_updated": "2025-12-13T20:37:11.802065Z"
+  "last_updated": "2025-12-29T10:28:58.971337Z",
+  "consent_token": "CONSENT-CUST_MSM_00001-1767004138879",
+  "consent_status": "APPROVED",
+  "consent_timestamp": "2025-12-29T10:28:58.880113Z"
 }

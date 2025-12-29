@@ -589,11 +589,9 @@ def compute_business_health_metrics(gst_data: Dict, transactions: List[Dict], on
             txn_type = (txn.get('type') or '').upper()
             
             if txn_type in ['CREDIT', 'CR', 'C']:
-                if month:
-                    monthly_credits[month] += amount
+                monthly_credits[month] += amount
             elif txn_type in ['DEBIT', 'DR', 'D']:
-                if month:
-                    monthly_debits[month] += amount
+                monthly_debits[month] += amount
         except:
             pass
     

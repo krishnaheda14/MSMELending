@@ -1,4 +1,18 @@
-# MSME Lending Solution — AA-Based Credit Lending System
+# MSME Lending Platform — Indian Financial Data Lake
+
+A compliance-first, developer-friendly platform that unifies Indian financial signals to deliver faster, explainable, and auditable MSME credit decisions.
+
+Top USPs
+- **Multi-source aggregation**: unified view across banking, GST, insurance, mutual funds, ONDC and OCEN.
+- **Consent-first & auditable**: per-customer scoping aligned with DPDP 2023 and RBI AA principles.
+- **Explainable scoring**: transparent, formula-backed credit calculations with per-metric breakdowns.
+- **Reproducible demos**: deterministic synthetic generators for stable, shareable demo datasets.
+
+Top features
+- Reproducible synthetic customer datasets for repeatable demos
+- End-to-end pipeline: generate → clean → analyze → score
+- Lightweight API + React dashboard for live demos and debugging
+- AI-assisted insights with graceful provider fallback
 
 ## Problem Statement
 
@@ -264,30 +278,25 @@ The application features 11 comprehensive tabs for complete financial analysis:
 
 ---
 
-## � Screenshots
+## Screenshots
 
-> **Note**: Screenshots are stored in [`docs/screenshots/`](docs/screenshots/) directory. Add your images there and reference them below.
+Note: Screenshots are stored in the `docs/screenshots/` directory.
 
 ### Dashboard Overview
-<!-- ![Dashboard Overview](docs/screenshots/dashboard-overview.png) -->
-*Coming soon: Main dashboard with credit score and analytics*
+![Dashboard](docs/screenshots/dashboard.png)
 
 ### Analytics & Insights
-<!-- ![Analytics View](docs/screenshots/analytics-insights.png) -->
-*Coming soon: Detailed financial metrics and AI recommendations*
+![Detailed Metrics](docs/screenshots/detailedmetrics.png)
+
+### Credit Scoring & Calculations
+![Credit Scoring](docs/screenshots/creditscoring.png)
+![Credit Calculations](docs/screenshots/creditcalculations.png)
+
+### Financial Summary
+![Financial Summary](docs/screenshots/financialsummary.png)
 
 ### Pipeline Monitor
-<!-- ![Pipeline Monitor](docs/screenshots/pipeline-monitor.png) -->
-*Coming soon: Real-time data generation and processing*
-
-### Credit Calculations
-<!-- ![Credit Calculations](docs/screenshots/credit-calculations.png) -->
-*Coming soon: Step-by-step credit score breakdown*
-
-> **To add screenshots**: 
-> 1. Place image files in `docs/screenshots/` directory
-> 2. Uncomment the relevant line above and update the filename
-> 3. Use format: `![Description](docs/screenshots/your-image.png)`
+![Pipeline Monitor](docs/screenshots/pipeline.png)
 
 ---
 

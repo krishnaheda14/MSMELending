@@ -11,6 +11,7 @@ import EarningsVsSpendings from './components/EarningsVsSpendings';
 import FinancialSummary from './components/FinancialSummary';
 import CreditMethodology from './components/CreditMethodology';
 import CreditCalculations from './components/CreditCalculations';
+import CustomerProfile from './components/CustomerProfile';
 import Sidebar from './components/Sidebar';
 
 function App() {
@@ -50,6 +51,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/pipeline" element={<PipelineMonitor />} />
               <Route path="/analytics" element={<AnalyticsInsights />} />
+              <Route path="/customer-profile" element={<CustomerProfile />} />
               <Route path="/financial-summary" element={<FinancialSummary />} />
               <Route path="/detailed-metrics" element={<EarningsVsSpendings />} />
               <Route path="/methodology" element={<CreditMethodology />} />
