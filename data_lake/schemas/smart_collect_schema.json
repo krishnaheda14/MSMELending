@@ -1,0 +1,248 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Smart Collect Schema",
+  "description": "Schema for smart collection optimization data",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Unique customer identifier"
+    },
+    "collection_summary": {
+      "type": "object",
+      "properties": {
+        "total_emis_scheduled": {
+          "type": "integer",
+          "description": "Total EMIs scheduled for collection"
+        },
+        "successful_collections": {
+          "type": "integer",
+          "description": "Number of successful collections"
+        },
+        "failed_collections": {
+          "type": "integer",
+          "description": "Number of failed collections"
+        },
+        "pending_collections": {
+          "type": "integer",
+          "description": "Number of pending collections"
+        },
+        "collection_success_rate": {
+          "type": "number",
+          "description": "Success rate percentage"
+        },
+        "total_amount_collected": {
+          "type": "number",
+          "description": "Total amount successfully collected"
+        },
+        "total_amount_pending": {
+          "type": "number",
+          "description": "Total amount pending collection"
+        },
+        "average_retry_count": {
+          "type": "number",
+          "description": "Average number of retries per collection"
+        },
+        "cost_saved": {
+          "type": "number",
+          "description": "Operational cost saved by smart scheduling"
+        }
+      }
+    },
+    "upcoming_collections": {
+      "type": "array",
+      "description": "Upcoming collection schedules",
+      "items": {
+        "type": "object",
+        "properties": {
+          "collection_id": {
+            "type": "string"
+          },
+          "loan_id": {
+            "type": "string"
+          },
+          "emi_amount": {
+            "type": "number"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "optimal_collection_window": {
+            "type": "object",
+            "properties": {
+              "start_date": {
+                "type": "string"
+              },
+              "end_date": {
+                "type": "string"
+              },
+              "confidence_score": {
+                "type": "number"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          },
+          "current_balance": {
+            "type": "number"
+          },
+          "predicted_balance": {
+            "type": "number"
+          },
+          "collection_probability": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["SCHEDULED", "OPTIMAL_WINDOW", "RISKY", "CRITICAL"]
+          }
+        }
+      }
+    },
+    "collection_history": {
+      "type": "array",
+      "description": "Historical collection attempts",
+      "items": {
+        "type": "object",
+        "properties": {
+          "collection_id": {
+            "type": "string"
+          },
+          "loan_id": {
+            "type": "string"
+          },
+          "attempt_number": {
+            "type": "integer"
+          },
+          "attempt_date": {
+            "type": "string"
+          },
+          "attempt_time": {
+            "type": "string"
+          },
+          "emi_amount": {
+            "type": "number"
+          },
+          "account_balance_at_attempt": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["SUCCESS", "FAILED_LOW_BALANCE", "FAILED_TECHNICAL", "FAILED_OTHER"]
+          },
+          "method": {
+            "type": "string",
+            "enum": ["E-NACH", "UPI_AUTOPAY", "MANUAL"]
+          },
+          "next_retry_scheduled": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "smart_recommendations": {
+      "type": "array",
+      "description": "AI-driven collection recommendations",
+      "items": {
+        "type": "object",
+        "properties": {
+          "recommendation_type": {
+            "type": "string",
+            "enum": ["RESCHEDULE", "FLEXIBLE_PLAN", "EARLY_REMINDER", "SKIP_ATTEMPT", "INCREASE_FREQUENCY"]
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["HIGH", "MEDIUM", "LOW"]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expected_impact": {
+            "type": "string"
+          },
+          "action_required": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "behavioral_insights": {
+      "type": "object",
+      "properties": {
+        "salary_credit_pattern": {
+          "type": "object",
+          "properties": {
+            "typical_date": {
+              "type": "integer"
+            },
+            "typical_amount": {
+              "type": "number"
+            },
+            "consistency_score": {
+              "type": "number"
+            }
+          }
+        },
+        "spending_pattern": {
+          "type": "object",
+          "properties": {
+            "high_spending_days": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "low_balance_days": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "average_daily_balance": {
+              "type": "number"
+            }
+          }
+        },
+        "payment_behavior": {
+          "type": "object",
+          "properties": {
+            "preferred_payment_time": {
+              "type": "string"
+            },
+            "payment_punctuality_score": {
+              "type": "number"
+            },
+            "avg_delay_days": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "risk_signals": {
+      "type": "array",
+      "description": "Risk indicators from financial behavior",
+      "items": {
+        "type": "object",
+        "properties": {
+          "signal_type": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "detected_date": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": ["customer_id", "collection_summary"]
+}

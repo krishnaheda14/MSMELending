@@ -12,6 +12,7 @@ import FinancialSummary from './components/FinancialSummary';
 import CreditMethodology from './components/CreditMethodology';
 import CreditCalculations from './components/CreditCalculations';
 import CustomerProfile from './components/CustomerProfile';
+import SmartCollect from './components/SmartCollect';
 import Sidebar from './components/Sidebar';
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
               <Route path="/pipeline" element={<PipelineMonitor />} />
               <Route path="/analytics" element={<AnalyticsInsights />} />
               <Route path="/customer-profile" element={<CustomerProfile />} />
+              <Route path="/smart-collect" element={<SmartCollect />} />
               <Route path="/financial-summary" element={<FinancialSummary />} />
               <Route path="/detailed-metrics" element={<EarningsVsSpendings />} />
               <Route path="/methodology" element={<CreditMethodology />} />

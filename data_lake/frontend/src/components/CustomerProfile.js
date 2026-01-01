@@ -12,6 +12,8 @@ const CustomerProfile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [gstTimeRange, setGstTimeRange] = useState('12M');
+  const [transactionTimeRange, setTransactionTimeRange] = useState('12M');
 
   useEffect(() => {
     loadProfile();
@@ -48,6 +50,98 @@ const CustomerProfile = () => {
   const formatNumber = (value) => {
     if (value === null || value === undefined) return 'N/A';
     return Number(value).toLocaleString('en-IN');
+  };
+
+  // Normalize and aggregate monthly data from various date formats
+  const normalizeMonthlyData = (data) => {
+    if (!data) return [];
+    
+    const aggregated = {};
+    
+    Object.entries(data).forEach(([dateStr, amount]) => {
+      // Try to parse various date formats to YYYY-MM
+      let normalizedDate;
+      
+      // Format: YYYY-MM or YYYY/MM
+      if (/^\d{4}[-\/]\d{2}$/.test(dateStr)) {
+        normalizedDate = dateStr.replace('/', '-');
+      }
+      // Format: DD-MM-Y or DD/MM/Y (need to add century)
+      else if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{1}$/.test(dateStr)) {
+        const parts = dateStr.split(/[-\/]/);
+        const day = parts[0].padStart(2, '0');
+        const month = parts[1].padStart(2, '0');
+        const year = parts[2] === '2' ? '2022' : '202' + parts[2];
+        normalizedDate = `${year}-${month}`;
+      }
+      // Format: D MMM Y (e.g., "4 Nov 2")
+      else if (/^\d{1,2}\s+[A-Za-z]{3}\s+\d{1}$/.test(dateStr)) {
+        const parts = dateStr.split(/\s+/);
+        const monthMap = {'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+                         'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'};
+        const month = monthMap[parts[1]];
+        const year = parts[2] === '2' ? '2022' : '202' + parts[2];
+        normalizedDate = `${year}-${month}`;
+      }
+      // Format: DD MMM (e.g., "10 Apr")
+      else if (/^\d{1,2}\s+[A-Za-z]{3}\s*$/.test(dateStr)) {
+        const parts = dateStr.trim().split(/\s+/);
+        const monthMap = {'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+                         'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'};
+        const month = monthMap[parts[1]];
+        // Assume current year for incomplete dates
+        normalizedDate = `2024-${month}`;
+      }
+      else {
+        // Skip unrecognized formats
+        return;
+      }
+      
+      // Aggregate amounts for the same month
+      if (normalizedDate) {
+        aggregated[normalizedDate] = (aggregated[normalizedDate] || 0) + amount;
+      }
+    });
+    
+    // Convert to array and sort
+    return Object.entries(aggregated)
+      .map(([month, amount]) => ({ month, amount }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+  };
+
+  // Filter time series data based on selected range
+  const filterDataByTimeRange = (data, range) => {
+    if (!data || data.length === 0) return [];
+    
+    let monthsToShow;
+
+    switch (range) {
+      case '1M':
+        monthsToShow = 1;
+        break;
+      case '3M':
+        monthsToShow = 3;
+        break;
+      case '6M':
+        monthsToShow = 6;
+        break;
+      case '12M':
+      case '1Y':
+        monthsToShow = 12;
+        break;
+      case '3Y':
+        monthsToShow = 36;
+        break;
+      case '5Y':
+        monthsToShow = 60;
+        break;
+      case 'ALL':
+        return data;
+      default:
+        monthsToShow = 12;
+    }
+
+    return data.slice(-monthsToShow);
   };
 
   // Chart colors
@@ -185,6 +279,161 @@ const CustomerProfile = () => {
             </div>
           </div>
 
+          {/* Daily Transaction Timeline Graph */}
+          {data.raw_transactions && data.raw_transactions.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6 mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-semibold text-lg">Daily Transaction Activity</h4>
+                <div className="flex gap-2">
+                  {['1M', '3M', '6M', '1Y', '3Y', '5Y', 'ALL'].map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setTransactionTimeRange(range)}
+                      className={`px-3 py-1 text-sm font-medium rounded ${
+                        transactionTimeRange === range
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {range}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {(() => {
+                // Aggregate transactions by date
+                const dailyAgg = {};
+                
+                data.raw_transactions.forEach(txn => {
+                  if (!txn.date) return;
+                  
+                  // Normalize date format
+                  let dateStr;
+                  try {
+                    const date = new Date(txn.date);
+                    if (!isNaN(date.getTime())) {
+                      dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                    }
+                  } catch (e) {
+                    return;
+                  }
+                  
+                  if (!dateStr) return;
+                  
+                  if (!dailyAgg[dateStr]) {
+                    dailyAgg[dateStr] = {
+                      date: dateStr,
+                      creditCount: 0,
+                      debitCount: 0,
+                      creditAmount: 0,
+                      debitAmount: 0
+                    };
+                  }
+                  
+                  const amount = txn.amount || 0;
+                  const type = (txn.type || '').toUpperCase();
+                  
+                  if (type === 'CREDIT') {
+                    dailyAgg[dateStr].creditCount++;
+                    dailyAgg[dateStr].creditAmount += amount;
+                  } else if (type === 'DEBIT') {
+                    dailyAgg[dateStr].debitCount++;
+                    dailyAgg[dateStr].debitAmount += amount;
+                  }
+                });
+                
+                // Convert to array and sort by date
+                const dailyData = Object.values(dailyAgg).sort((a, b) => 
+                  new Date(a.date) - new Date(b.date)
+                );
+                
+                // Filter by time range
+                const filteredData = filterDataByTimeRange(
+                  dailyData.map(d => ({ month: d.date, ...d })),
+                  transactionTimeRange
+                );
+                
+                return (
+                  <div className="space-y-6">
+                    {/* Transaction Count Graph */}
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-600 mb-2">Transaction Count per Day</h5>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={filteredData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="month" 
+                            tick={{ fontSize: 11 }}
+                            angle={-45}
+                            textAnchor="end"
+                            height={60}
+                          />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
+                                    <p className="font-semibold mb-1">{payload[0].payload.month}</p>
+                                    <p className="text-green-600 text-sm">Credit: {payload[0].value} txns</p>
+                                    <p className="text-red-600 text-sm">Debit: {payload[1].value} txns</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend />
+                          <Bar dataKey="creditCount" name="Credit" fill="#10b981" />
+                          <Bar dataKey="debitCount" name="Debit" fill="#ef4444" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    
+                    {/* Transaction Amount Graph */}
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-600 mb-2">Transaction Amount per Day</h5>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <AreaChart data={filteredData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="month" 
+                            tick={{ fontSize: 11 }}
+                            angle={-45}
+                            textAnchor="end"
+                            height={60}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 11 }}
+                            tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
+                          />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
+                                    <p className="font-semibold mb-1">{payload[0].payload.month}</p>
+                                    <p className="text-green-600 text-sm">Credit: {formatCurrency(payload[0].value)}</p>
+                                    <p className="text-red-600 text-sm">Debit: {formatCurrency(payload[1].value)}</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend />
+                          <Area type="monotone" dataKey="creditAmount" name="Credit Amount" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                          <Area type="monotone" dataKey="debitAmount" name="Debit Amount" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             {/* Transaction Amount by Type - Pie Chart */}
@@ -255,15 +504,14 @@ const CustomerProfile = () => {
     const data = profileData?.data_sources?.gst;
     if (!data) return <div className="text-gray-500">No GST data available</div>;
 
-    // Prepare monthly GST data for line chart (sort by month)
-    const monthlyData = data.monthly_gst_turnover 
-      ? Object.entries(data.monthly_gst_turnover)
-          .map(([month, amount]) => ({
-            month: month,
-            turnover: amount
-          }))
-          .slice(-12) // Last 12 months
-      : [];
+    // Normalize and aggregate monthly GST data
+    const allMonthlyData = normalizeMonthlyData(data.monthly_gst_turnover).map(item => ({
+      month: item.month,
+      turnover: item.amount
+    }));
+    
+    // Filter based on selected time range
+    const monthlyData = filterDataByTimeRange(allMonthlyData, gstTimeRange);
 
     return (
       <div className="space-y-6">
@@ -287,7 +535,24 @@ const CustomerProfile = () => {
           {/* Monthly GST Turnover Trend - Line Chart */}
           {monthlyData.length > 0 && (
             <div className="bg-gray-50 p-4 rounded-lg mt-6">
-              <h4 className="font-semibold mb-4">Monthly GST Turnover Trend (Last 12 Months)</h4>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-semibold">Monthly GST Turnover Trend</h4>
+                <div className="flex gap-2">
+                  {['1M', '3M', '6M', '1Y', '3Y', '5Y', 'ALL'].map(range => (
+                    <button
+                      key={range}
+                      onClick={() => setGstTimeRange(range)}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                        gstTimeRange === range
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {range}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <ResponsiveContainer width="100%" height={350}>
                 <AreaChart data={monthlyData}>
                   <defs>
@@ -444,12 +709,77 @@ const CustomerProfile = () => {
     const data = profileData?.data_sources?.anomalies;
     if (!data) return <div className="text-gray-500">No anomaly data available</div>;
 
+    // Extract monthly cashflow anomalies
+    const monthlyAnomalies = data.monthly_cashflow_anomalies?.anomalies || [];
+
     return (
       <div className="space-y-6">
+        {/* Monthly Cashflow Anomalies - PRIORITY */}
+        {monthlyAnomalies.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <AlertTriangle className="w-5 h-5 mr-2 text-red-600" />
+              Monthly Cashflow Anomalies
+            </h3>
+            <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-semibold text-red-900">Critical Anomalies Detected</p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Detection Method: {data.monthly_cashflow_anomalies?.detection_method || 'Statistical Analysis'}
+                  </p>
+                </div>
+                <div className="text-3xl font-bold text-red-600">
+                  {monthlyAnomalies.length}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {monthlyAnomalies.map((anomaly, idx) => {
+                const deviation = anomaly.deviation_from_median_pct;
+                const isPositive = deviation > 0;
+                const severityColor = Math.abs(deviation) > 1000 ? 'border-red-600 bg-red-50' : 
+                                     Math.abs(deviation) > 500 ? 'border-orange-600 bg-orange-50' : 
+                                     'border-yellow-600 bg-yellow-50';
+                
+                return (
+                  <div key={idx} className={`p-4 rounded-lg border-l-4 ${severityColor}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-semibold text-lg">{anomaly.month}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {isPositive ? '↑' : '↓'} {Math.abs(deviation).toFixed(1)}% deviation from median
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-xl">{formatCurrency(anomaly.amount)}</p>
+                        {anomaly.z_score && (
+                          <p className="text-xs text-gray-500 mt-1">Z-score: {anomaly.z_score}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Additional anomaly details */}
+                    {(anomaly.iqr_lower_bound || anomaly.iqr_upper_bound) && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <p className="text-xs text-gray-600">
+                          Expected Range: {formatCurrency(anomaly.iqr_lower_bound)} - {formatCurrency(anomaly.iqr_upper_bound)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Transaction-Level Anomalies */}
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <AlertTriangle className="w-5 h-5 mr-2 text-yellow-600" />
-            Anomalies Report
+            Transaction-Level Anomalies
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
@@ -963,18 +1293,20 @@ const CustomerProfile = () => {
     const expenses = data.expense_composition || {};
     const credit = data.credit_behavior || {};
 
-    // Prepare monthly inflow/outflow data for charts
-    const monthlyInflowData = cashflow.monthly_inflow 
-      ? Object.entries(cashflow.monthly_inflow)
-          .map(([month, amount]) => ({ month, inflow: amount }))
-          .slice(-12)
-      : [];
+    // Prepare monthly inflow/outflow data for charts - normalized and aggregated
+    const allInflowData = normalizeMonthlyData(cashflow.monthly_inflow).map(item => ({
+      month: item.month,
+      inflow: item.amount
+    }));
     
-    const monthlyOutflowData = cashflow.monthly_outflow 
-      ? Object.entries(cashflow.monthly_outflow)
-          .map(([month, amount]) => ({ month, outflow: amount }))
-          .slice(-12)
-      : [];
+    const allOutflowData = normalizeMonthlyData(cashflow.monthly_outflow).map(item => ({
+      month: item.month,
+      outflow: item.amount
+    }));
+
+    // Filter based on selected time range
+    const monthlyInflowData = filterDataByTimeRange(allInflowData, transactionTimeRange);
+    const monthlyOutflowData = filterDataByTimeRange(allOutflowData, transactionTimeRange);
 
     // Combine inflow and outflow for comparison chart
     const cashflowComparisonData = monthlyInflowData.map((inflowItem, idx) => ({
@@ -1030,7 +1362,24 @@ const CustomerProfile = () => {
           {/* Monthly Inflow vs Outflow Chart */}
           {cashflowComparisonData.length > 0 && (
             <div className="bg-gray-50 p-4 rounded-lg mt-6">
-              <h4 className="font-semibold mb-4">Monthly Inflow vs Outflow (Last 12 Months)</h4>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-semibold">Monthly Inflow vs Outflow</h4>
+                <div className="flex gap-2">
+                  {['1M', '3M', '6M', '1Y', '3Y', '5Y', 'ALL'].map(range => (
+                    <button
+                      key={range}
+                      onClick={() => setTransactionTimeRange(range)}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                        transactionTimeRange === range
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {range}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={cashflowComparisonData}>
                   <CartesianGrid strokeDasharray="3 3" />

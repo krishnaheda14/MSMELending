@@ -105,3 +105,21 @@ This report shows the current state of analytics for all 10 customer profiles af
 - **Analytics regeneration**: ✅ All 10 customers processed successfully
 - **Profile focus**: 7/10 profiles show clear single issue, 3 need adjustment
 - **Non-overlap**: ✅ Each working profile has ONE prominent issue, others normal
+
+Customer Details 
+
+Credit Summary : {
+  "customer_id": "CUST_MSM_00001",
+  "generated_at": "2025-12-15T09:25:42.471806Z",
+  "bureau_score": 761,
+  "open_loans": 2,
+  "total_outstanding": 465177,
+  "credit_utilization": 63.17,
+  "payment_history": "Good",
+  "calculation": {
+    "reports_counted": 1,
+    "bureau_score_source": "simulated_random_for_demo",
+    "total_outstanding_estimate": 465177,
+    "explanation": "Aggregated 1 credit report entries; bureau score (simulated)=761, total outstanding approx 465177."
+  }
+}

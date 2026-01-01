@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Activity, Terminal, Database, FileText, Trash2, BarChart3, BookOpen, Calculator, TrendingUp, DollarSign, FileSpreadsheet, User } from 'lucide-react';
+import { Home, Activity, Terminal, Database, FileText, Trash2, BarChart3, BookOpen, Calculator, TrendingUp, DollarSign, FileSpreadsheet, User, Zap } from 'lucide-react';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
@@ -10,6 +10,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/pipeline', icon: Activity, label: 'Pipeline Monitor' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics & Insights' },
     { path: '/customer-profile', icon: User, label: 'Customer Profile' },
+    { path: '/smart-collect', icon: Zap, label: 'Smart Collect', badge: 'NEW' },
     { path: '/financial-summary', icon: DollarSign, label: 'Financial Summary (P&L)' },
     { path: '/detailed-metrics', icon: FileSpreadsheet, label: 'Detailed Metrics' },
     { path: '/methodology', icon: BookOpen, label: 'Credit Methodology' },
@@ -46,6 +47,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium">{item.label}</span>
+                {item.badge && (
+                  <span className="ml-auto px-2 py-1 text-xs font-bold bg-green-500 text-white rounded-full">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
