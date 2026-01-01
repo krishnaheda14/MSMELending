@@ -24,8 +24,8 @@ Top features
 - RBI Account Aggregator Framework requires standardized multi-FIP data fetching
 
 **Business Impact**:
-- 50+ day average loan turnaround for MSMEs
-- 40% rejection rate due to incomplete financial visibility
+- High average loan turnaround for MSMEs
+- High rejection rate due to incomplete financial visibility
 - Manual underwriting prone to bias and errors
 - Cannot scale to millions of MSME borrowers
 
@@ -631,3 +631,4 @@ Built with adherence to:
 ---
 
 **Built for the future of MSME lending in India. 🚀**
+
