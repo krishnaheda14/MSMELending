@@ -14,6 +14,28 @@ Top features
 - Lightweight API + React dashboard for live demos and debugging
 - AI-assisted insights with graceful provider fallback
 
+## Screenshots
+
+Note: Screenshots are stored in the `docs/screenshots/` directory.
+
+### Dashboard Overview
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Analytics & Insights
+![Detailed Metrics](docs/screenshots/detailedmetrics.png)
+
+### Credit Scoring & Calculations
+![Credit Scoring](docs/screenshots/creditscoring.png)
+![Credit Calculations](docs/screenshots/creditcalculations.png)
+
+### Financial Summary
+![Financial Summary](docs/screenshots/financialsummary.png)
+
+### Pipeline Monitor
+![Pipeline Monitor](docs/screenshots/pipeline.png)
+
+---
+
 ## Problem Statement
 
 **Challenge**: Traditional MSME lending in India faces critical barriers:
@@ -277,29 +299,6 @@ The application features 11 comprehensive tabs for complete financial analysis:
 - `.gitignore` excludes raw data files (`data_lake/raw/*.ndjson`)
 
 ---
-
-## Screenshots
-
-Note: Screenshots are stored in the `docs/screenshots/` directory.
-
-### Dashboard Overview
-![Dashboard](docs/screenshots/dashboard.png)
-
-### Analytics & Insights
-![Detailed Metrics](docs/screenshots/detailedmetrics.png)
-
-### Credit Scoring & Calculations
-![Credit Scoring](docs/screenshots/creditscoring.png)
-![Credit Calculations](docs/screenshots/creditcalculations.png)
-
-### Financial Summary
-![Financial Summary](docs/screenshots/financialsummary.png)
-
-### Pipeline Monitor
-![Pipeline Monitor](docs/screenshots/pipeline.png)
-
----
-
 
 ### Prerequisites
 - Python 3.11+
@@ -631,5 +630,6 @@ Built with adherence to:
 ---
 
 **Built for the future of MSME lending in India. 🚀**
+
 
 
