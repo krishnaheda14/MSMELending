@@ -427,6 +427,103 @@ def load_ndjson(filepath: str) -> List[Dict]:
     return data
 
 
+def _mask_value(key: str, value: Any) -> Any:
+    """Mask or pseudonymize sensitive values by key."""
+    if value is None:
+        return None
+
+    try:
+        s = str(value)
+    except Exception:
+        return value
+
+    # Keys that contain account numbers - keep last 4 digits
+    if key.lower() in ('account_number', 'counterparty_account', 'masked_account_number'):
+        digits = re.sub(r'\D', '', s)
+        if len(digits) <= 4:
+            return 'XXXX' + digits
+        return 'X' * max(0, len(digits) - 4) + digits[-4:]
+
+    # UPI id - mask localpart, keep domain
+    if key.lower() in ('upi_id', 'upi'):
+        if '@' in s:
+            local, domain = s.split('@', 1)
+            if len(local) <= 2:
+                masked_local = local[0] + '***'
+            else:
+                masked_local = local[0] + '***' + local[-1]
+            return masked_local + '@' + domain
+        else:
+            return '***' + s[-3:]
+
+    # PAN - show last 3 chars only
+    if key.lower() in ('pan',):
+        if len(s) <= 3:
+            return 'XXX'
+        return 'XXX' + s[-3:]
+
+    # Names and other identifiers - deterministic pseudonym
+    if key.lower() in ('holder_name', 'buyer_name', 'legal_name', 'merchant_name', 'applicant_id', 'user_id'):
+        h = hashlib.sha1(s.encode('utf-8')).hexdigest()[:8]
+        return f'PSEUD_{h}'
+
+    # GSTIN/IFSC are less sensitive but can be masked partially
+    if key.lower() in ('gstin',):
+        if len(s) > 4:
+            return 'X' * (len(s) - 4) + s[-4:]
+        return 'X' * len(s)
+
+    if key.lower() in ('ifsc',):
+        # keep last 4 chars
+        if len(s) > 4:
+            return 'XXXX' + s[-4:]
+        return 'XXXX'
+
+    # Default: return as-is
+    return value
+
+
+def mask_pii_in_record(rec: Dict) -> Dict:
+    """Return a shallow-copied record with PII masked by known keys."""
+    if not isinstance(rec, dict):
+        return rec
+
+    masked = {}
+    for k, v in rec.items():
+        if isinstance(v, dict):
+            # recurse one level to avoid deep traversal cost
+            masked[k] = mask_pii_in_record(v)
+        elif isinstance(v, list):
+            # mask list elements if primitive/dict
+            new_list = []
+            for item in v:
+                if isinstance(item, dict):
+                    new_list.append(mask_pii_in_record(item))
+                else:
+                    new_list.append(item)
+            masked[k] = new_list
+        else:
+            # apply masking for known sensitive keys
+            masked[k] = _mask_value(k, v)
+
+    return masked
+
+
+def mask_log_entries(logs: List[Dict]) -> List[Dict]:
+    """Mask PII inside log entries (old_value/new_value fields)."""
+    masked_logs = []
+    for entry in logs:
+        e = dict(entry)
+        if 'old_value' in e:
+            e['old_value'] = _mask_value('old_value', e['old_value'])
+        if 'new_value' in e:
+            e['new_value'] = _mask_value('new_value', e['new_value'])
+        if 'value' in e:
+            e['value'] = _mask_value('value', e['value'])
+        masked_logs.append(e)
+    return masked_logs
+
+
 def save_log(log_data: List[Dict], filepath: str):
     """Save log data."""
     with open(filepath, 'w', encoding='utf-8') as f:
@@ -480,10 +577,12 @@ def main():
     account_ids = {t.get('account_id') for t in deduped_txns if t.get('account_id')}
     print(f"[IDENTIFIER-CHECK] Found {len(account_ids)} unique account IDs")
     
-    save_ndjson(deduped_txns, 'clean/transactions_clean.ndjson')
-    save_log(txn_cleaner.parsing_log, 'logs/transaction_parsing_log.json')
-    save_log(txn_cleaner.cleaning_log, 'logs/transaction_cleaning_log.json')
-    save_log(txn_cleaner.validation_errors, 'logs/transaction_validation_errors.json')
+    # Mask PII before saving cleaned transactions and logs
+    masked_txns = [mask_pii_in_record(t) for t in deduped_txns]
+    save_ndjson(masked_txns, 'clean/transactions_clean.ndjson')
+    save_log(mask_log_entries(txn_cleaner.parsing_log), 'logs/transaction_parsing_log.json')
+    save_log(mask_log_entries(txn_cleaner.cleaning_log), 'logs/transaction_cleaning_log.json')
+    save_log(mask_log_entries(txn_cleaner.validation_errors), 'logs/transaction_validation_errors.json')
     print(f"[COMPLETED] Transactions: {len(deduped_txns)} cleaned records")
     print(f"  - Parsing actions: {len(txn_cleaner.parsing_log)}")
     print(f"  - Validation errors: {len(txn_cleaner.validation_errors)}")
@@ -527,9 +626,11 @@ def main():
     ifsc_codes = {a.get('ifsc') for a in deduped_accs if a.get('ifsc')}
     print(f"[IDENTIFIER-CHECK] Found {len(ifsc_codes)} unique IFSC codes")
     
-    save_ndjson(deduped_accs, 'clean/accounts_clean.ndjson')
-    save_log(account_cleaner.parsing_log, 'logs/account_parsing_log.json')
-    save_log(account_cleaner.validation_errors, 'logs/account_validation_errors.json')
+    # Mask PII before saving cleaned accounts and logs
+    masked_accs = [mask_pii_in_record(a) for a in deduped_accs]
+    save_ndjson(masked_accs, 'clean/accounts_clean.ndjson')
+    save_log(mask_log_entries(account_cleaner.parsing_log), 'logs/account_parsing_log.json')
+    save_log(mask_log_entries(account_cleaner.validation_errors), 'logs/account_validation_errors.json')
     print(f"[COMPLETED] Accounts: {len(deduped_accs)} cleaned records")
     
     # Clean GST
@@ -572,9 +673,11 @@ def main():
     if len(gstins) > 1:
         print(f"[WARNING] Multiple GSTINs detected: {list(gstins)[:3]}...")
     
-    save_ndjson(deduped_gst, 'clean/gst_clean.ndjson')
-    save_log(gst_cleaner.parsing_log, 'logs/gst_parsing_log.json')
-    save_log(gst_cleaner.validation_errors, 'logs/gst_validation_errors.json')
+    # Mask PII before saving cleaned GST returns and logs
+    masked_gst = [mask_pii_in_record(g) for g in deduped_gst]
+    save_ndjson(masked_gst, 'clean/gst_clean.ndjson')
+    save_log(mask_log_entries(gst_cleaner.parsing_log), 'logs/gst_parsing_log.json')
+    save_log(mask_log_entries(gst_cleaner.validation_errors), 'logs/gst_validation_errors.json')
     print(f"[COMPLETED] GST Returns: {len(deduped_gst)} cleaned records")
 
     # Clean OCEN applications
@@ -600,9 +703,11 @@ def main():
             deduped_ocen.append(app)
     print(f"[SUB-STEP] {len(deduped_ocen)} unique applications")
     
-    save_ndjson(deduped_ocen, 'clean/ocen_applications_clean.ndjson')
-    save_log(ocen_cleaner.parsing_log, 'logs/ocen_parsing_log.json')
-    save_log(ocen_cleaner.validation_errors, 'logs/ocen_validation_errors.json')
+    # Mask PII before saving cleaned OCEN applications and logs
+    masked_ocen = [mask_pii_in_record(o) for o in deduped_ocen]
+    save_ndjson(masked_ocen, 'clean/ocen_applications_clean.ndjson')
+    save_log(mask_log_entries(ocen_cleaner.parsing_log), 'logs/ocen_parsing_log.json')
+    save_log(mask_log_entries(ocen_cleaner.validation_errors), 'logs/ocen_validation_errors.json')
     print(f"[COMPLETED] OCEN Applications: {len(deduped_ocen)} cleaned records")
 
     # Clean ONDC orders
@@ -628,9 +733,11 @@ def main():
             deduped_ondc.append(order)
     print(f"[SUB-STEP] {len(deduped_ondc)} unique orders")
     
-    save_ndjson(deduped_ondc, 'clean/ondc_orders_clean.ndjson')
-    save_log(ondc_cleaner.parsing_log, 'logs/ondc_parsing_log.json')
-    save_log(ondc_cleaner.validation_errors, 'logs/ondc_validation_errors.json')
+    # Mask PII before saving cleaned ONDC orders and logs
+    masked_ondc = [mask_pii_in_record(o) for o in deduped_ondc]
+    save_ndjson(masked_ondc, 'clean/ondc_orders_clean.ndjson')
+    save_log(mask_log_entries(ondc_cleaner.parsing_log), 'logs/ondc_parsing_log.json')
+    save_log(mask_log_entries(ondc_cleaner.validation_errors), 'logs/ondc_validation_errors.json')
     print(f"[COMPLETED] ONDC Orders: {len(deduped_ondc)} cleaned records")
     
     print("\n✓ Data cleaning completed!")

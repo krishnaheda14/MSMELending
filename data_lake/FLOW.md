@@ -28,6 +28,7 @@ Generate realistic synthetic Indian financial data matching production patterns 
 ✅ **Complete Pipeline** - Raw → Clean → Analytics  
 ✅ **Web Debug Panel** - Visual exploration tool  
 ✅ **Configurable Scale** - From 1K to 50K+ users  
+✅ **Consent-based Access & Smart Collect** - Consent enforcement and a consent-driven micro-collection module
 
 ---
 
@@ -69,6 +70,7 @@ Generate realistic synthetic Indian financial data matching production patterns 
 │  raw_transactions.ndjson     | raw_ondc_orders.ndjson               │
 │  raw_gst.ndjson              | raw_ocen_applications.ndjson         │
 │  raw_credit_reports.ndjson   |                                      │
+│  raw_smart_collect.ndjson    |                                      │
 └────────────────────────────┬────────────────────────────────────────┘
                              │
                              ▼
@@ -82,6 +84,7 @@ Generate realistic synthetic Indian financial data matching production patterns 
 │  Phase 4: STANDARDIZATION  → Enum mapping, type coercion            │
 │  Phase 5: DEDUPLICATION    → Remove duplicates                      │
 │  Phase 6: VALIDATION       → JSONSchema validation                  │
+│  Consent Enforcement       → Apply consent filters (consent artefacts)│
 └────────────────────────────┬────────────────────────────────────────┘
                              │
                  ┌───────────┴───────────┐
@@ -128,6 +131,8 @@ Generate realistic synthetic Indian financial data matching production patterns 
 │  • GET /              → Dashboard UI                                 │
 │  • GET /api/data/{dataset}?type=raw|clean → Dataset viewer           │
 │  • GET /api/logs/{logType}  → Transformation logs                    │
+│  • GET /api/consent   → Consent artefacts (raw|clean)                 │
+│  • POST /api/smart_collect → Trigger Smart Collect request           │
 │  • GET /api/stats     → Overall statistics                           │
 └────────────────────────────┬────────────────────────────────────────┘
                              │

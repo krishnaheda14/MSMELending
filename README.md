@@ -318,7 +318,12 @@ cd MSMELending/data_lake
 pip install -r requirements.txt
 
 # Create .env file with API keys
-echo "DEEPSEEK_API_KEY=sk-553a2062a03e4a88aec97575bd25d268" > .env
+
+### Consent & Tokens (brief)
+- Consent is mandatory and scoped per-customer. Obtain a consent token via `POST /api/request-consent` before invoking pipeline actions.
+- Token lifecycle: tokens include `consent_expiry` (default 24h if not supplied). `fetch_type` controls reuse: `ONETIME` tokens are single-use; `PERIODIC` tokens may be reused until expiry.
+- Frequency is expressed via `frequency_unit` (HOURLY/DAILY/MONTHLY/YEARLY). `data_from`/`data_to` define allowed fetch range.
+- The server enforces token verification (token, expiry, single-use) for `generate`, `clean`, and `analytics`. Token state and consent scope are persisted in `logs/pipeline_cache/{customer_id}_pipeline.json` for audit.
 echo "GEMINI_API_KEY=your_gemini_key_here" >> .env
 ```
 

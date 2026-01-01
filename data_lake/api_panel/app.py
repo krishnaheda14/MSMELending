@@ -11,7 +11,7 @@ import subprocess
 import sys
 import threading
 from typing import List, Dict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Project directories
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -124,6 +124,55 @@ def is_raw_dataset_present(customer_id: str) -> bool:
     except Exception:
         return False
     return False
+
+
+def _parse_iso_datetime(s: str):
+    if not s:
+        return None
+    try:
+        # Support naive ISO strings
+        return datetime.fromisoformat(s.replace('Z', '+00:00'))
+    except Exception:
+        try:
+            return datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
+        except Exception:
+            return None
+
+
+def verify_consent_token(customer_id: str, token: str):
+    """Verify token exists, matches cache, not expired, and not reused outside scope."""
+    if not customer_id or not token:
+        return False, 'customer_id and token required'
+
+    cache = load_pipeline_cache(customer_id)
+    stored = cache.get('consent_token')
+    status = cache.get('consent_status')
+    if not stored or stored != token:
+        return False, 'invalid_token'
+    if status != 'APPROVED':
+        return False, 'consent_not_approved'
+
+    # expiry check
+    consent_expiry = cache.get('consent_expiry')
+    if consent_expiry:
+        dt = _parse_iso_datetime(consent_expiry)
+        if dt and datetime.utcnow() > dt.replace(tzinfo=None):
+            return False, 'token_expired'
+
+    # ONETIME reuse check
+    fetch_type = cache.get('fetch_type')
+    if fetch_type == 'ONETIME' and cache.get('token_used'):
+        return False, 'token_already_used'
+
+    # token is valid
+    return True, 'ok'
+
+
+def mark_token_used(customer_id: str):
+    state = load_pipeline_cache(customer_id)
+    state['token_used'] = True
+    state['last_updated'] = datetime.utcnow().isoformat() + 'Z'
+    save_pipeline_cache(customer_id, state)
 
 
 def flush_pipeline_buffer_once():
@@ -356,6 +405,17 @@ def run_generate():
     if not customer_id:
         print("  [SECURITY] Rejecting generate pipeline call without customer_id")
         return jsonify({'error': 'Generation must be requested per-customer. Provide customer_id.'}), 400
+
+    # Require consent token for generation
+    token = payload.get('token') or request.args.get('token')
+    ok, reason = verify_consent_token(customer_id, token)
+    if not ok:
+        print(f"  [SECURITY] Consent verification failed for generate: {reason}")
+        return jsonify({'error': 'Consent verification failed', 'reason': reason}), 403
+    # Mark token used immediately for ONETIME fetches
+    cache = load_pipeline_cache(customer_id)
+    if cache.get('fetch_type') == 'ONETIME':
+        mark_token_used(customer_id)
     
     def run_generation():
         print("  [DEBUG] Generation thread started")
@@ -470,15 +530,34 @@ def request_consent():
         print("  [ERROR] Missing customer_id")
         return jsonify({'error': 'customer_id required'}), 400
     
+    # Accept optional consent metadata from payload
+    payload_fields = {}
+    for k in ('consent_id', 'data_from', 'data_to', 'consent_types', 'fip_ids', 'consent_mode', 'frequency_unit', 'fetch_type', 'consent_expiry'):
+        if k in payload:
+            payload_fields[k] = payload.get(k)
+
     # Generate consent token
     import time
     token = f"CONSENT-{customer_id}-{int(time.time() * 1000)}"
-    
-    # Store token in pipeline cache
+
+    # Default expiry: 24 hours if not provided
+    if 'consent_expiry' not in payload_fields or not payload_fields.get('consent_expiry'):
+        expiry_dt = datetime.utcnow() + timedelta(hours=24)
+        payload_fields['consent_expiry'] = expiry_dt.isoformat() + 'Z'
+
+    # Store token and consent metadata in pipeline cache
     state = load_pipeline_cache(customer_id)
     state['consent_token'] = token
     state['consent_status'] = 'APPROVED'
     state['consent_timestamp'] = datetime.utcnow().isoformat() + 'Z'
+    state['token_created_at'] = datetime.utcnow().isoformat() + 'Z'
+    state['token_used'] = False
+    # store provided metadata (scope)
+    state.setdefault('consent_scope', {}).update(payload_fields)
+    # also mirror some top-level keys for convenience
+    state['consent_expiry'] = payload_fields.get('consent_expiry')
+    state['frequency_unit'] = payload_fields.get('frequency_unit')
+    state['fetch_type'] = payload_fields.get('fetch_type')
     save_pipeline_cache(customer_id, state)
     
     # Log to terminal and socketio
@@ -516,6 +595,15 @@ def run_clean():
     if not customer_id:
         print("  [SECURITY] Rejecting clean pipeline call without customer_id")
         return jsonify({'error': 'Cleaning must be requested per-customer. Provide customer_id.'}), 400
+
+    # Require consent token for cleaning
+    token = payload.get('token') or request.args.get('token')
+    ok, reason = verify_consent_token(customer_id, token)
+    if not ok:
+        print(f"  [SECURITY] Consent verification failed for clean: {reason}")
+        return jsonify({'error': 'Consent verification failed', 'reason': reason}), 403
+    if load_pipeline_cache(customer_id).get('fetch_type') == 'ONETIME':
+        mark_token_used(customer_id)
     
     def run_cleaning():
         print("  [DEBUG] Cleaning thread started")
@@ -620,22 +708,18 @@ def run_analytics():
     if not customer_id:
         print("  [SECURITY] Rejecting analytics pipeline call without customer_id")
         return jsonify({'error': 'Analytics must be requested per-customer. Provide customer_id.'}), 400
-    
-    # Verify consent token if provided
-    if token:
-        cache = load_pipeline_cache(customer_id)
-        stored_token = cache.get('consent_token')
-        consent_status = cache.get('consent_status')
-        
-        if stored_token != token:
-            print(f"  [SECURITY] Invalid token for {customer_id}")
-            return jsonify({'error': 'Invalid consent token'}), 403
-        
-        if consent_status != 'APPROVED':
-            print(f"  [SECURITY] Consent not approved for {customer_id}")
-            return jsonify({'error': 'Consent not approved'}), 403
-        
-        print(f"  [CONSENT] ✓ Token verified for {customer_id}")
+
+    # Require consent token for analytics
+    if not token:
+        return jsonify({'error': 'token required for analytics'}), 403
+
+    ok, reason = verify_consent_token(customer_id, token)
+    if not ok:
+        print(f"  [SECURITY] Consent verification failed for analytics: {reason}")
+        return jsonify({'error': 'Consent verification failed', 'reason': reason}), 403
+    # mark used for ONETIME
+    if load_pipeline_cache(customer_id).get('fetch_type') == 'ONETIME':
+        mark_token_used(customer_id)
     
     def run_analytics_gen():
         print("  [DEBUG] Analytics thread started")
