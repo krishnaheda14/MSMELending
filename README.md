@@ -1,4 +1,4 @@
-# MSME Lending Platform — Indian Financial Data Lake
+# MSME Lending Platform - Indian Financial Data Lake
 
 A compliance-first, developer-friendly platform that unifies Indian financial signals to deliver faster, explainable, and auditable MSME credit decisions.
 
@@ -631,4 +631,5 @@ Built with adherence to:
 ---
 
 **Built for the future of MSME lending in India. 🚀**
+
 
